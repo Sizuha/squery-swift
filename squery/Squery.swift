@@ -13,9 +13,10 @@ protocol SQueryRow {
 	func toValues() -> Dictionary<String,Any>
 }
 
-enum SQueryError: Error {
-	case prepareFailed
-	case noResult
+enum SQueryJoin {
+	case inner
+	case leftOuter
+	case cross
 }
 
 private var enableDebugMode = true
@@ -444,6 +445,11 @@ class TableQuery {
 	
 	private var sqlDistnict = false
 	
+	private var sqlJoin = ""
+	private var sqlJoinTables = [String]()
+	private var sqlJoinOn = ""
+	private var sqlJoinOnArgs = [Any?]()
+	
 	private var sqlWhere = String()
 	private var sqlWhereArgs = [Any?]()
 	
@@ -465,6 +471,10 @@ class TableQuery {
 	
 	func reset() -> TableQuery {
 		sqlDistnict = false
+		sqlJoin = ""
+		sqlJoinTables.removeAll()
+		sqlJoinOn = ""
+		sqlJoinOnArgs.removeAll()
 		sqlWhere = ""
 		sqlWhereArgs.removeAll()
 		sqlOrderBy = ""
@@ -482,7 +492,32 @@ class TableQuery {
 		return self
 	}
 	
+	func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> TableQuery {
+		return join(type: joinType, tables: tables, on: joinOn, args: args)
+	}
+	func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, args: [Any?]) -> TableQuery {
+		switch joinType {
+		case .cross:
+			sqlJoin = "CROSS JOIN"
+			break;
+		case .leftOuter:
+			sqlJoin = "LEFT OUTER JOIN"
+		default:
+			sqlJoin = "INNER JOIN"
+			break;
+		}
+
+		sqlJoinTables = tables
+		sqlJoinOn = joinOn
+		sqlJoinOnArgs = args
+		
+		return self
+	}
+
 	func setWhere(_ whereText: String, _ args: Any?...) -> TableQuery {
+		return setWhere(whereText, args: args)
+	}
+	func setWhere(_ whereText: String, args: [Any?]) -> TableQuery {
 		sqlWhereArgs.removeAll()
 		
 		sqlWhere = "(\(whereText))"
@@ -494,6 +529,9 @@ class TableQuery {
 	}
 	
 	func whereAnd(_ whereText: String, _ args: Any?...) -> TableQuery {
+		return whereAnd(whereText, args: args)
+	}
+	func whereAnd(_ whereText: String, args: [Any?]) -> TableQuery {
 		if sqlWhere.isEmpty {
 			sqlWhere = "(\(whereText))"
 		}
@@ -581,7 +619,20 @@ class TableQuery {
 		sql.append(" FROM \(name) ")
 		
 		// JOIN
-		// not yet
+		if !sqlJoin.isEmpty  {
+			sql.append(" \(sqlJoin) ")
+			
+			var first = true
+			for t in sqlJoinTables {
+				if first { first = false } else {
+					sql.append(",")
+				}
+				//sql.append("`\(t)`")
+				sql.append(t)
+			}
+			
+			sql.append("ON \(sqlJoinOn)")
+		}
 		
 		// WHERE
 		if !sqlWhere.isEmpty {
@@ -616,10 +667,14 @@ class TableQuery {
 		}
 		return select()
 	}
-
+	
 	func select() -> SQLiteCursor {
 		let sql = makeQuerySql()
-		return db.query(sql: sql, args: sqlWhereArgs)
+		let args = sqlJoinOnArgs.isEmpty
+			? sqlWhereArgs
+			: sqlJoinOnArgs + sqlWhereArgs
+		
+		return db.query(sql: sql, args: args)
 	}
 	
 	func select<T: SQueryRow>(factory: ()->T, forEach: (T)->Void) {
@@ -686,16 +741,13 @@ class TableQuery {
 		return self
 	}
 	
-	func insert(values row: SQueryRow, except cols: String...) -> Bool {
+	func insert(values row: SQueryRow, except cols: [String] = []) -> Bool {
 		return values(row).insert(except: cols)
 	}
-	func insert(values data: Dictionary<String,Any>, except cols: String...) -> Bool {
+	func insert(values data: Dictionary<String,Any>, except cols: [String] = []) -> Bool {
 		return values(data).insert(except: cols)
 	}
 	
-	func insert(except cols: String...) -> Bool {
-		return insert(except: cols)
-	}
 	func insert(except cols: [String] = []) -> Bool {
 		var sql = "INSERT INTO \(name) "
 		
@@ -759,12 +811,12 @@ class TableQuery {
 		return 0
 	}
 	
-	//--- INSERT & UPDATE ---
-	func insertOrUpdate(except cols: String...) -> Bool {
+	//--- INSERT or UPDATE ---
+	func insertOrUpdate(exceptInsert cols: [String] = []) -> Bool {
 		return insert(except: cols) || update() > 0
 	}
 	
-	func updateOrInsert(except cols: String...) -> Bool {
+	func updateOrInsert(exceptInsert cols: [String] = []) -> Bool {
 		return update() > 0 || insert(except: cols)
 	}
 
