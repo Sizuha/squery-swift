@@ -33,7 +33,7 @@ private func printLog(_ text: String, _ args: CVarArg...) {
 /**
 SQLiteのクエリの結果(row達)を探索する
 
-Code
+使い方
 ---
 
 rowを探索する
@@ -68,6 +68,11 @@ class SQLiteCursor {
 	
 	private var columnNameMap = Dictionary<String,Int>()
 
+	/// Cursorオブジェクトを作成する。
+	/// 直接オブジェクトを作成する事は無く、SQLiteConnectionクラスから実行されたクエリの結果として作られる。
+	///
+	/// - Parameter stmt:
+	///   `sqlite3_prepare_v2()`もしくはSQLiteConnectionクラスの`prepare()`の戻り値
 	required init(_ stmt: OpaquePointer) {
 		self.stmt = stmt
 		columnCountRaw = sqlite3_column_count(stmt)
@@ -80,13 +85,12 @@ class SQLiteCursor {
 	
 	/// 初期状態に戻る。
 	/// rowをまた習得するには `next()` をコール。
-	/// - seealso: next()
 	func reset() {
 		sqlite3_reset(stmt)
 	}
 	
 	/// 次のrowを習得する
-	/// - returns: rowがあったらtrue
+	/// - Returns: rowがあったら**true**
 	func next() -> Bool {
 		let res = sqlite3_step(stmt)
 		switch res {
@@ -99,6 +103,8 @@ class SQLiteCursor {
 		}
 	}
 	
+	/// Coursorの作業を完全に終了する。
+	/// 仕様が終わったCursorは必ず`close()`する事。
 	func close() {
 		if let stmt = stmt {
 			sqlite3_finalize(stmt)
@@ -106,6 +112,13 @@ class SQLiteCursor {
 		stmt = nil
 	}
 	
+	/// column名で、Cursor内のindexを習得
+	///
+	/// - Parameters:
+	///   - name: column名
+	/// - Returns:
+	///   column名が存在する場合**columnのindex**、
+	///   存在しない場合**nil**を返す
 	func getColumnIndex(name: String) -> Int? {
 		return columnNameMap[name]
 	}
@@ -114,6 +127,11 @@ class SQLiteCursor {
 		return String(cString: sqlite3_column_name(stmt, col))
 	}
 	
+	/// columnのindexでcolumnの名前を習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns:
+	///   indexが存在する場合**column名**、存在しない場合**nil**を返す
 	func getColumnName(_ col: Int) -> String? {
 		for (colName, colIdx) in columnNameMap {
 			if colIdx == col {
@@ -123,7 +141,12 @@ class SQLiteCursor {
 		return nil
 	}
 	
-	func forEachColumn(_ each: (SQLiteCursor,Int)->Void) {
+	/// 各column毎に処理を行う。
+	///
+	/// - Parameter each: 各column毎で呼ばれるClosure。
+	/// - Parameter cursor: Coursorオブジェクト（自身）
+	/// - Parameter index: 現在のcolumnのindex
+	func forEachColumn(_ each: (_ cursor: SQLiteCursor, _ index: Int)->Void) {
 		for i in 0..<columnCount {
 			each(self, i)
 		}
@@ -131,17 +154,29 @@ class SQLiteCursor {
 	
 	//--- get Datas ---
 
+	/// columnのデータが**nil**か確認
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns: **nil**の場合**true**
 	func isNull(_ col: Int) -> Bool {
 		let dataType = sqlite3_column_type(stmt, Int32(col))
 		return dataType == SQLITE_NULL
 	}
 	
+	/// columnから32bitのInt型データを習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns: データが**NULL**の場合は**nil**、それ以外はInt型の値を返す。
 	func getInt(_ col: Int) -> Int? {
 		return isNull(col)
 			? nil
 			: Int(sqlite3_column_int(stmt, Int32(col)))
 	}
 	
+	/// columnからInt64型データを習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns: データが**NULL**の場合は**nil**、それ以外はInt64型の値を返す。
 	func getInt64(_ col: Int) -> Int64? {
 		return isNull(col)
 			? nil
@@ -187,6 +222,11 @@ class SQLiteCursor {
 	
 }
 
+/**
+ SQLite DBを操作するクラス。
+
+ DBファイルを開いて、クエリを実行できる。
+*/
 class SQLiteConnection {
 	private var db: OpaquePointer? = nil
 	
@@ -356,16 +396,19 @@ class SQLiteConnection {
 	}
 }
 
+/**
+ SQLite DBをべ便利に扱う為のライブラリ
+
+ 使い方
+ ---
+
+
+*/
 class SQuery {
 	private var filepath: String
 	
 	required init(_ dbfile: String) {
 		filepath = dbfile
-	}
-	
-	internal func getError(_ db: OpaquePointer) -> String {
-		let errMsgRaw = sqlite3_errmsg(db)
-		return String(cString: errMsgRaw!)
 	}
 	
 	func open() -> SQLiteConnection? {
