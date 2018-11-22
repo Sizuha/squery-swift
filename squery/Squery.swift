@@ -13,6 +13,13 @@ protocol SQueryRow {
 	func toValues() -> Dictionary<String,Any>
 }
 
+enum SQLiteOpenMode {
+	case readWriteCreate // rwc
+	case readWrite // rw
+	case readonly // ro
+	case memory // memory
+}
+
 enum SQueryJoin {
 	case inner
 	case leftOuter
@@ -117,8 +124,8 @@ class SQLiteCursor {
 	/// - Parameters:
 	///   - name: column名
 	/// - Returns:
-	///   column名が存在する場合**columnのindex**、
-	///   存在しない場合**nil**を返す
+	///   1) column名が存在する場合: columnのindex
+	///   2) 存在しない場合: nil
 	func getColumnIndex(name: String) -> Int? {
 		return columnNameMap[name]
 	}
@@ -166,7 +173,9 @@ class SQLiteCursor {
 	/// columnから32bitのInt型データを習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns: データが**NULL**の場合は**nil**、それ以外はInt型の値を返す。
+	/// - Returns:
+	///   1) データが**NULL**の場合: nil
+	///   2) それ以外: Int型の値
 	func getInt(_ col: Int) -> Int? {
 		return isNull(col)
 			? nil
@@ -176,7 +185,9 @@ class SQLiteCursor {
 	/// columnからInt64型データを習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns: データが**NULL**の場合は**nil**、それ以外はInt64型の値を返す。
+	/// - Returns:
+	///   1) データが**NULL**の場合: nil
+	///   2) それ以外: Int64型の値
 	func getInt64(_ col: Int) -> Int64? {
 		return isNull(col)
 			? nil
@@ -223,9 +234,9 @@ class SQLiteCursor {
 }
 
 /**
- SQLite DBを操作するクラス。
+SQLite DBを操作するクラス。
 
- DBファイルを開いて、クエリを実行できる。
+DBファイルを開いて、クエリを実行できる。
 */
 class SQLiteConnection {
 	private var db: OpaquePointer? = nil
@@ -397,38 +408,119 @@ class SQLiteConnection {
 }
 
 /**
- SQLite DBをべ便利に扱う為のライブラリ
+SQLite DBをべ便利に扱う為のライブラリ
 
- 使い方
- ---
+使い方
+---
+Open & Close
+```
+let dbConn = SQuery("db_file_path").open()
+dbConn?.close()
+```
 
+Tableを指定してクエリを作成する
+```
+let db = SQuery("db_file_path")
+// from() メソッドは自動でDBをopenする
+let cursor = db.from("Table名")?.select()
 
+// 使用後
+cursor?.close()
+db.close()
+```
+
+参照
+---
+TableQuery class
 */
 class SQuery {
-	private var filepath: String
-	
-	required init(_ dbfile: String) {
-		filepath = dbfile
-	}
-	
-	func open() -> SQLiteConnection? {
-		var db: OpaquePointer? = nil
+	private var dataSource: String
+	private var dbConn: SQLiteConnection? = nil
 
-		let res = sqlite3_open(filepath, &db)
-		let conn = SQLiteConnection(db!)
-		
-		if res != SQLITE_OK {
-			printLog("Can't open DB -> %@", conn.getLastError()!)
-			conn.close()
-			return nil;
+
+	/// SQLite DBファイルをOpen又は作成する
+	///
+	/// - Parameters:
+	///   - dbfile: 対象のDBファイル
+	///     1) URI形式(`file:`で始まる): file:/path/filename.db
+	///     2) パスとファイル名: 自動でURI形式に変換する。URI Encodeも適用。パスを省略すると、アプリのDocumentのパスを使う。
+	///   - mode:
+	///	    - .readWriteCreate (default) = 読み書きができる・ファイルが存在しない場合作成する
+	///	    - .readWrite = 読み書きができる
+	///     - .readonly = 修正不可
+	///     - .memory = メモリーDB
+	required init(_ dbfile: String, mode: SQLiteOpenMode = .readWriteCreate) {
+		if !dbfile.starts(with: "file:") {
+			dataSource = "file:"
+			
+			let path = dbfile.starts(with: "/")
+				? dbfile
+				: NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+			
+			if let encoded =
+				path.addingPercentEncoding(withAllowedCharacters: NSCharacterSet.urlQueryAllowed)
+			{
+				dataSource.append(encoded)
+			}
+			else {
+				dataSource.append(path)
+			}
 		}
-		return conn
+		else {
+			dataSource = dbfile
+		}
+		
+		dataSource.append("?mode=")
+		switch mode {
+		case .readonly:
+			dataSource.append("ro")
+		case .readWrite:
+			dataSource.append("rw")
+		case .memory:
+			dataSource.append("memory")
+		default:
+			dataSource.append("rwc")
+		}
 	}
 	
-	func close(_ db: OpaquePointer) {
-		sqlite3_close(db)
+	/// DBファイルを開く
+	///
+	/// このメソッドで直接DBファイルを開くよりは、`from()`メソッドを使うことをおすすめする。
+	/// - Returns:
+	///   1) DBファイルを開いて、SQLiteConnection オブジェクトとして返す
+	///   2) 以前、開いたものがあったら、それを返す
+	///   3) 失敗したら、nil
+	func open() -> SQLiteConnection? {
+		if dbConn == nil || dbConn?.isClosed == true {
+			var db: OpaquePointer?
+			let res = sqlite3_open(dataSource, &db)
+			dbConn = SQLiteConnection(db!)
+			
+			if res != SQLITE_OK {
+				printLog("Can't open DB -> %@", dbConn!.getLastError()!)
+				close()
+				return nil;
+			}
+		}
+		return dbConn
 	}
 	
+	/// DBファイルを閉じる
+	func close() {
+		dbConn?.close()
+		dbConn = nil
+	}
+	
+	/// Tableを指定する
+	///
+	/// 以後、指定したTableに対してクエリを実行する事になる
+	///
+	/// 参照
+	/// ---
+	/// TableQuery class
+	///
+	/// - Parameter table: Table名
+	/// - Returns: クエリを作成できる**TableQuery**オブジェクト
 	func from(table: String) -> TableQuery? {
 		if let db = open() {
 			return TableQuery(db, table: table)
@@ -482,9 +574,12 @@ class SQuery {
 	}
 }
 
+/**
+SQLite DBの一つのTableに対して、クエリ分を作成し、実行する
+*/
 class TableQuery {
 	private let db: SQLiteConnection
-	private let name: String
+	private let tableName: String
 	
 	private var sqlDistnict = false
 	
@@ -497,8 +592,11 @@ class TableQuery {
 	private var sqlWhereArgs = [Any?]()
 	
 	private var sqlOrderBy = ""
-	private var sqlGroupBy = ""
 	
+	private var sqlGroupByCols = [String]()
+	private var sqlHaving = ""
+	private var sqlHavingArgs = [Any?]()
+
 	private var sqlLimitCount = 0
 	private var sqlLimitOffset = 0
 	
@@ -507,23 +605,60 @@ class TableQuery {
 	
 	private var sqlValues = Dictionary<String,Any>()
 	
+	/// DBからTableを指定て、instanceを作る
+	///
+	/// Examples
+	/// ---
+	/// ```
+	/// if let dbConn = SQuery("some.db").open() {
+	/// 	let table = TableQuery(dbConn, "tableName")
+	///		// ...
+	/// }
+	/// ```
+	/// SQueryクラスの`from()`メソッドをおすすめ
+	/// ```
+	/// let table = SQuery("some.db").from("tableName")
+	/// ```
+	///
+	/// - Parameters:
+	///   - db: 開いたDBオブジェクト
+	///   - table: Table名
 	required init(_ db: SQLiteConnection, table: String) {
 		self.db = db
-		name = table
+		tableName = table
 	}
 	
+	/// DBを閉じる
+	///
+	/// SQueryクラスの`close()`やSQLiteConnectionクラスの`close()`と同じ機能
+	func close() {
+		db.close()
+	}
+	
+	/// クエリの設定を初期化する
+	///
+	/// ただし、`keys()`の設定は残る。
+	/// クエリを一度実行してから、また別の設定でクエリを実行すためには一度`reset()`する事をおすすめする。
+	/// - Returns: 自分のinstance
 	func reset() -> TableQuery {
 		sqlDistnict = false
+		
 		sqlJoin = ""
 		sqlJoinTables.removeAll()
 		sqlJoinOn = ""
 		sqlJoinOnArgs.removeAll()
+		
 		sqlWhere = ""
 		sqlWhereArgs.removeAll()
+		
+		sqlGroupByCols.removeAll()
+		sqlHaving = ""
+		sqlHavingArgs.removeAll()
+		
 		sqlOrderBy = ""
-		sqlGroupBy = ""
 		sqlLimitCount = 0
 		sqlLimitOffset = 0
+		
 		sqlColumns.removeAll()
 		//sqlKeyColumns.removeAll()
 		sqlValues.removeAll()
@@ -557,9 +692,26 @@ class TableQuery {
 		return self
 	}
 
+	/// 参照
+	/// ---
+	/// `func setWhere(_ whereText: String, args: [Any?]) -> TableQuery`
 	func setWhere(_ whereText: String, _ args: Any?...) -> TableQuery {
 		return setWhere(whereText, args: args)
 	}
+	/// WHERE句を作成する
+	///
+	/// SQLiteの「?」パラメーターに対応
+	/// ```
+	/// // SELECT count(*) FROM account WHERE id=\(id) AND pass=\(pwd)
+	/// let cursor = SQuery("user.db").from("account")?
+	/// 	.setWhere("id=? AND pass=?", id, pwd)
+	/// 	.select()
+	/// ```
+	///
+	/// - Parameters:
+	///   - whereText: WHERE句に入る条件
+	///   - args: 条件の中の「?」に対応するパラメータ達
+	/// - Returns: 自分のinstance
 	func setWhere(_ whereText: String, args: [Any?]) -> TableQuery {
 		sqlWhereArgs.removeAll()
 		
@@ -571,9 +723,36 @@ class TableQuery {
 		return self
 	}
 	
+	/// 参照
+	/// ---
+	/// `func whereAnd(_ whereText: String, args: [Any?]) -> TableQuery`
 	func whereAnd(_ whereText: String, _ args: Any?...) -> TableQuery {
 		return whereAnd(whereText, args: args)
 	}
+	/// `setWhere()`と同じだが、現在のWHERE句にAND条件で追加する
+	/// ```
+	/// // SELECT count(*) FROM account WHERE (id=\(id)) AND (pass=\(pwd))
+	/// let loginOk = SQuery("user.db").from("account")?
+	/// 	.setWhere("id=?", id)
+	/// 	.whereAnd("pass=?", pwd)
+	/// 	.count() == 1
+	/// ```
+	/// `setWhere()`を使わずに`whereAnd()`だけでWHERE句を作成することもできる
+	/// ```
+	/// let loginOk = SQuery("user.db").from("account")?
+	/// 	.whereAnd("id=?", id)
+	/// 	.whereAnd("pass=?", pwd)
+	/// 	.count() == 1
+	/// ```
+	///
+	/// 参照
+	/// ---
+	/// `func setWhere(_ whereText: String, args: [Any?]) -> TableQuery`
+	///
+	/// - Parameters:
+	///   - whereText: 追加する条件
+	///   - args: 条件の中の「?」に対応するパラメータ達
+	/// - Returns: 自分のinstance
 	func whereAnd(_ whereText: String, args: [Any?]) -> TableQuery {
 		if sqlWhere.isEmpty {
 			sqlWhere = "(\(whereText))"
@@ -589,6 +768,22 @@ class TableQuery {
 		return self
 	}
 	
+	/// ORDER BY句に並べ条件を追加する
+	///
+	/// ```
+	/// // SELECT * from account ORDER BY joinDate DESC, name ASC
+	/// let cursor = SQuery("user.db").from("account")?
+	/// 	.orderBy("joinDate", false)
+	/// 	.orderBy("name")
+	/// 	.select()
+	///
+	/// ```
+	/// - Parameters:
+	///   - field: ソートするcolumn名
+	///   - asc:
+	///     1) true = 昇順 (default)
+	///     2) false = 降順
+	/// - Returns: 自分のinstance
 	func orderBy(_ field: String, asc: Bool = true) -> TableQuery {
 		if sqlOrderBy.count > 0 {
 			sqlOrderBy.append(",")
@@ -600,15 +795,57 @@ class TableQuery {
 		}
 		return self
 	}
-	func setOrderBy(_ orderByRaw: String) {
-		sqlOrderBy = orderByRaw
-	}
 	
-	func groupBy(_ groupByText: String) -> TableQuery {
-		self.sqlGroupBy = groupByText
+	/// ORDER BY句全体を作成する
+	///
+	/// ```
+	/// // SELECT * from account ORDER BY joinDate DESC, name ASC
+	/// let cursor = SQuery("user.db").from("account")?
+	/// 	.setOrderBy("joinDate DESC, name ASC")
+	/// 	.select()
+	///
+	/// ```
+	/// - Parameter orderByRaw: 自分のinstance
+	/// - Returns: 自分のinstance
+	func setOrderBy(_ orderByRaw: String) -> TableQuery {
+		sqlOrderBy = orderByRaw
 		return self
 	}
 	
+	/// HAVING条件なしのGROUP BY句を作成する
+	/// 参照
+	/// ---
+	/// `func groupBy(_ cols: [String], having: String, args: [Any?]) -> TableQuery`
+	///
+	/// - Parameter cols: GROUP BYするcolumn達
+	/// - Returns: 自分のinstance
+	func groupBy(_ cols: String...) -> TableQuery {
+		sqlGroupByCols = cols
+		sqlHaving = ""
+		sqlHavingArgs.removeAll()
+		return self
+	}
+	/// GROUP BY句を作成する
+	/// 参照
+	/// ---
+	/// `func groupBy(_ cols: [String], having: String, args: [Any?]) -> TableQuery`
+	func groupBy(_ cols: [String], having: String, args: Any?...) -> TableQuery {
+		return groupBy(cols, having: having, args: args)
+	}
+	/// GROUP BY句を作成する
+	///
+	/// - Parameters:
+	///   - cols: GROUP BYするcolumn達
+	///   - having: HAVING条件
+	///   - args: HAVING条件の「?」に対応するパラメーター
+	/// - Returns: 自分のinstance
+	func groupBy(_ cols: [String], having: String, args: [Any?]) -> TableQuery {
+		sqlGroupByCols = cols
+		sqlHaving = having
+		sqlHavingArgs = args
+		return self
+	}
+
 	func limit(_ count: Int, offset: Int = 0) -> TableQuery {
 		sqlLimitCount = count
 		sqlLimitOffset = offset
@@ -659,7 +896,7 @@ class TableQuery {
 		}
 		
 		// FROM
-		sql.append(" FROM \(name) ")
+		sql.append(" FROM \(tableName) ")
 		
 		// JOIN
 		if !sqlJoin.isEmpty  {
@@ -679,22 +916,33 @@ class TableQuery {
 		
 		// WHERE
 		if !sqlWhere.isEmpty {
-			sql.append("WHERE \(sqlWhere) ")
+			sql.append(" WHERE \(sqlWhere)")
+		}
+		
+		// GROUP BY [HAVING]
+		if !sqlGroupByCols.isEmpty {
+			sql.append(" GROUP BY ")
+			var first = false
+			for col in sqlGroupByCols {
+				if first { first = false } else {
+					sql.append(",")
+				}
+				sql.append(col)
+			}
+			
+			if !sqlHaving.isEmpty {
+				sql.append(" HAVING \(sqlHaving)")
+			}
 		}
 		
 		// ORDER BY
 		if !sqlOrderBy.isEmpty {
-			sql.append("ORDER BY \(sqlOrderBy) ")
-		}
-		
-		// GROUP BY
-		if !sqlGroupBy.isEmpty {
-			sql.append("GROUP BY \(sqlGroupBy) ")
+			sql.append(" ORDER BY \(sqlOrderBy) ")
 		}
 		
 		// LIMIT
 		if sqlLimitCount > 0 {
-			sql.append("LIMIT \(sqlLimitOffset),\(sqlLimitCount)")
+			sql.append(" LIMIT \(sqlLimitOffset),\(sqlLimitCount)")
 		}
 		sql.append(";");
 		
@@ -713,9 +961,7 @@ class TableQuery {
 	
 	func select() -> SQLiteCursor {
 		let sql = makeQuerySql()
-		let args = sqlJoinOnArgs.isEmpty
-			? sqlWhereArgs
-			: sqlJoinOnArgs + sqlWhereArgs
+		let args = sqlJoinOnArgs + sqlWhereArgs + sqlHavingArgs
 		
 		return db.query(sql: sql, args: args)
 	}
@@ -762,19 +1008,6 @@ class TableQuery {
 		return db.executeScalar(sql: sql, args: sqlWhereArgs)
 	}
 	
-	//--- DELETE ---
-	func delete() -> Int {
-		var sql = "DELETE FROM \(name)"
-		if !sqlWhere.isEmpty {
-			sql.append(" WHERE \(sqlWhere)")
-		}
-		sql.append(";")
-		if db.execute(sql: sql, args: sqlWhereArgs) {
-			return db.getLastChangedRowCount()
-		}
-		return 0
-	}
-	
 	//--- INSERT ---
 	func values(_ row: SQueryRow) -> TableQuery {
 		return values(row.toValues())
@@ -792,7 +1025,7 @@ class TableQuery {
 	}
 	
 	func insert(except cols: [String] = []) -> Bool {
-		var sql = "INSERT INTO \(name) "
+		var sql = "INSERT INTO \(tableName) "
 		
 		var cols = ""
 		var vals = ""
@@ -820,7 +1053,7 @@ class TableQuery {
 	
 	//--- UPDATE ---
 	func update(autoMakeWhere: Bool = true) -> Int {
-		var sql = "UPDATE \(name) SET "
+		var sql = "UPDATE \(tableName) SET "
 		var args = [Any?]()
 		var first = true
 		for (colName, value) in sqlValues {
@@ -854,6 +1087,20 @@ class TableQuery {
 		return 0
 	}
 	
+	//--- DELETE ---
+	func delete() -> Int {
+		var sql = "DELETE FROM \(tableName)"
+		if !sqlWhere.isEmpty {
+			sql.append(" WHERE \(sqlWhere)")
+		}
+		
+		sql.append(";")
+		if db.execute(sql: sql, args: sqlWhereArgs) {
+			return db.getLastChangedRowCount()
+		}
+		return 0
+	}
+
 	//--- INSERT or UPDATE ---
 	func insertOrUpdate(exceptInsert cols: [String] = []) -> Bool {
 		return insert(except: cols) || update() > 0
