@@ -20,6 +20,12 @@ enum SQLiteOpenMode {
 	case memory // memory
 }
 
+enum SQLiteTransactionMode {
+	case deferred
+	case immediate
+	case exclusive
+}
+
 enum SQueryJoin {
 	case inner
 	case leftOuter
@@ -277,7 +283,6 @@ class SQLiteConnection {
 			let errMsgRaw = sqlite3_errmsg(db)
 			return String(cString: errMsgRaw!)
 		}
-		
 		return nil
 	}
 	
@@ -414,6 +419,52 @@ class SQLiteConnection {
 	func execute(sql: String, args: [Any?]) -> Bool {
 		let stmt = prepare(sql: sql, args: args)
 		return excute(stmt!)
+	}
+	
+	
+	func getUserVersion() -> Int {
+		return executeScalar(sql: "PRAGMA user_version;") ?? 0
+	}
+	func setUserVersion(_ ver: Int) -> Bool {
+		return execute(sql: "PRAGMA user_version=\(ver);")
+	}
+
+	//--- TRANSACTION ---
+	// cf. https://www.sqlite.org/lang_transaction.html
+	func beginTransaction(_ mode: SQLiteTransactionMode = .deferred) -> Bool {
+		var modeStr = ""
+		switch mode {
+		case .immediate:
+			modeStr = "IMMEDIATE"
+		case .exclusive:
+			modeStr = "EXCLUSIVE"
+		default:
+			modeStr = "DEFERRED"
+		}
+		
+		return execute(sql: "BEGIN \(modeStr) TRANSACTION;")
+	}
+	
+	func endTransaction() -> Bool {
+		return commit()
+	}
+	func commit() -> Bool {
+		return execute(sql: "COMMIT TRANSACTION;")
+	}
+	
+	func setSavePoint(name: String) -> Bool {
+		return execute(sql: "SAVEPOINT \(name);")
+	}
+	
+	func releaseSavePoint(name: String) -> Bool {
+		return execute(sql: "RELEASE SAVEPOINT \(name);")
+	}
+	
+	func rollback() -> Bool {
+		return execute(sql: "ROLLBACK TRANSACTION;")
+	}
+	func rollback(toSavePoint: String) -> Bool {
+		return execute(sql: "ROLLBACK TO SAVEPOINT \(toSavePoint);")
 	}
 }
 
@@ -1143,7 +1194,7 @@ class TableQuery {
 		return sql
 	}
 	
-	/// クエリ(SELECT)を実行し、その結果をCurosrオブジェクトで返す
+	/// SELECTクエリを実行し、その結果をCurosrオブジェクトで返す
 	///
 	/// 参照
 	/// ---
@@ -1165,7 +1216,15 @@ class TableQuery {
 		return db.query(sql: sql, args: args)
 	}
 	
-	func select<T: SQueryRow>(factory: ()->T, forEach: (T)->Void) {
+	/// SELECTクエリを実行し、結果の各行(row)毎に処理を行う
+	///
+	/// cursorは自動でcloseされる
+	///
+	/// - Parameters:
+	///   - factory: SQueryRow型のinstanceを生成するclouser
+	///   - forEach: 各行(row)で行う処理(clouser)
+	///   - each: 各行(row)のデータ、SQueryRow型
+	func select<T: SQueryRow>(factory: ()->T, forEach: (_ each: T)->Void) {
 		let cursor = select()
 		defer {
 			cursor.close()
