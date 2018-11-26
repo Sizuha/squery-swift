@@ -60,7 +60,25 @@ if let conn = SQuery("sample.db").open() {
 
 rowからデータを習得
 ```
+if let tblAcc = SQuery("user.db").from("account") {
+	defer { tblAcc.close() }
+	if let cursor = tblAcc
+		.whereAnd("joinDate >= ", 2018)
+		.orderBy("joinDate")
+		.select("id,name,age,joinDate")
+	{
+		defer { cursor.close() }
+		let id = cursor.getString(0)
+		let name = cursor.getString(1)
+		let age = cursor.getInt(2)
 
+		let joindateRaw = cursor.getString(3)
+		let joinDate: Date? = joindateRaw != nil
+			? SQuery.dateTimeFormat.date(from: joindateRaw)
+			: nil
+		// ...
+	}
+}
 ```
 */
 class SQLiteCursor {
@@ -68,9 +86,7 @@ class SQLiteCursor {
 	
 	private var columnCountRaw: Int32 = 0
 	var columnCount: Int {
-		get {
-			return Int(columnCountRaw)
-		}
+		return Int(columnCountRaw)
 	}
 	
 	private var columnNameMap = Dictionary<String,Int>()
@@ -253,7 +269,7 @@ class SQLiteConnection {
 	}
 	
 	var isClosed: Bool {
-		get { return db == nil }
+		return db == nil
 	}
 	
 	func getLastError() -> String? {
@@ -431,12 +447,13 @@ db.close()
 
 参照
 ---
-TableQuery class
+```
+class TableQuery
+```
 */
 class SQuery {
 	private var dataSource: String
 	private var dbConn: SQLiteConnection? = nil
-
 
 	/// SQLite DBファイルをOpen又は作成する
 	///
@@ -517,8 +534,9 @@ class SQuery {
 	///
 	/// 参照
 	/// ---
-	/// TableQuery class
-	///
+	/// ```
+	/// class TableQuery
+	/// ```
 	/// - Parameter table: Table名
 	/// - Returns: クエリを作成できる**TableQuery**オブジェクト
 	func from(table: String) -> TableQuery? {
@@ -576,6 +594,121 @@ class SQuery {
 
 /**
 SQLite DBの一つのTableに対して、クエリ分を作成し、実行する
+
+Rowデータのオブジェクト（例）
+```
+class Account: SQueryRow {
+	var id = ""
+	var pass = ""
+	var name = ""
+	var age = 0
+	var joinDate: Date? = nil
+
+	func loadFrom(cursor: SQLiteCursor) {
+		cursor.forEachColumn { cursor, index in
+			let colName = cursor.getColumnName(index)
+			switch colName {
+			case "id":
+				id = cursor.getString(index)
+				break
+			case "pwd":
+				pass = cursor.getString(index)
+				break
+			case "name":
+				name = cursor.getString(index)
+				break
+			case "age":
+				age = cursor.getInt(index)
+			case "join_date":
+				joinDate: Date? = joindateRaw != nil
+					? SQuery.dateTimeFormat.date(from: joindateRaw)
+					: nil
+				break
+			}
+		}
+	}
+
+	func toValues() -> Dictionary<String,Any> {
+		return [
+			"id": id, "pwd": pass, "name": name, "age": age,
+			"join_date": SQuery.dateTimeFormat.string(joinDate)
+		]
+	}
+}
+```
+
+SELECT
+---
+```
+// SELECT id, name, age FROM account WHERE age < 18 ORDER BY age DESC
+if let tableAcc = SQuery("user.db").from("account") {
+	defer { tableAcc.close()  }
+	let rows = tableAcc
+		.columns("id","name","age") //省略すると「all columns」
+		.setWhere("age < ?", 18)
+		.orderBy(age, asc: false)
+		.select { Account() }
+
+	for row in rows { ... }
+}
+```
+
+SELECT One
+---
+```
+// SELECT * account ORDER BY age DESC LIMIT 1
+let oldest: Account = tableAcc
+	.orderBy(age, asc: false)
+	.selectOne { Account() }
+```
+
+COUNT
+---
+```
+// SELECT count(*) FROM account WHERE age < 18
+let under18cnt = tableAcc.setWhere("age<?",18).count()
+```
+
+INSERT
+---
+```
+let data = Account()
+data.id = "test"
+data.pwd = "********"
+data.age = 20
+data.name = "Tester"
+
+// INSERT INTO account (id,pwd,age,name)
+// VALUES ("test","********",20,"Tester");
+tableAcc.values(data).insert()
+// 又は
+tableAcc.insert(values: data)
+```
+
+UPDATE
+---
+```
+// UPDATE account
+// SET pwd="********", age=20, name="Tester"
+// WHERE id="test";
+tableAcc.keys("id").values(data).update()
+// 又は
+tableAcc.keys("id").update(set: data)
+```
+
+INSERT or UPDATE
+---
+```
+tableAcc.keys("id").values(data).insertOrUpdate()
+```
+
+DELETE
+---
+```
+// DELETE FROM account WHERE id = \(id)
+tableAcc.setWhere("id=?",id).delete()
+```
+
 */
 class TableQuery {
 	private let db: SQLiteConnection
@@ -665,6 +798,13 @@ class TableQuery {
 		return self
 	}
 	
+	/// SELECT時に、重複したrow(行)は除外する設定
+	///
+	/// SQLの「SELECT DISTNIC」機能
+	/// - Parameter flag:
+	///   1) true = 重複したrow(行)を除外する
+	///   2) false = 重複したrow(行)も残す
+	/// - Returns: 自分のinstance
 	func distnict(_ flag: Bool = true) -> TableQuery {
 		sqlDistnict = flag
 		return self
@@ -673,6 +813,11 @@ class TableQuery {
 	func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> TableQuery {
 		return join(type: joinType, tables: tables, on: joinOn, args: args)
 	}
+	/// 参照
+	/// ---
+	/// ```
+	/// func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> TableQuery
+	/// ```
 	func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, args: [Any?]) -> TableQuery {
 		switch joinType {
 		case .cross:
@@ -692,26 +837,35 @@ class TableQuery {
 		return self
 	}
 
-	/// 参照
-	/// ---
-	/// `func setWhere(_ whereText: String, args: [Any?]) -> TableQuery`
-	func setWhere(_ whereText: String, _ args: Any?...) -> TableQuery {
-		return setWhere(whereText, args: args)
-	}
 	/// WHERE句を作成する
 	///
-	/// SQLiteの「?」パラメーターに対応
+	/// 検索条件を指定する。
+	/// SQLiteの「?」パラメーターに対応。
 	/// ```
 	/// // SELECT count(*) FROM account WHERE id=\(id) AND pass=\(pwd)
 	/// let cursor = SQuery("user.db").from("account")?
 	/// 	.setWhere("id=? AND pass=?", id, pwd)
 	/// 	.select()
+	///
+	/// // UPDATE account SET pass=\(newPwd) WHERE id=\(id)
+	/// if let table = SQuery("user.db").from("account") {
+	/// 	table.setWhere("id=?", id).update(set: ["pass":newPwd])
+	/// 	table.close()
+	/// }
 	/// ```
 	///
 	/// - Parameters:
 	///   - whereText: WHERE句に入る条件
 	///   - args: 条件の中の「?」に対応するパラメータ達
 	/// - Returns: 自分のinstance
+	func setWhere(_ whereText: String, _ args: Any?...) -> TableQuery {
+		return setWhere(whereText, args: args)
+	}
+	/// 参照
+	/// ---
+	/// ```
+	/// func setWhere(_ whereText: String, args: Any?...) -> TableQuery
+	/// ```
 	func setWhere(_ whereText: String, args: [Any?]) -> TableQuery {
 		sqlWhereArgs.removeAll()
 		
@@ -723,12 +877,6 @@ class TableQuery {
 		return self
 	}
 	
-	/// 参照
-	/// ---
-	/// `func whereAnd(_ whereText: String, args: [Any?]) -> TableQuery`
-	func whereAnd(_ whereText: String, _ args: Any?...) -> TableQuery {
-		return whereAnd(whereText, args: args)
-	}
 	/// `setWhere()`と同じだが、現在のWHERE句にAND条件で追加する
 	/// ```
 	/// // SELECT count(*) FROM account WHERE (id=\(id)) AND (pass=\(pwd))
@@ -747,12 +895,21 @@ class TableQuery {
 	///
 	/// 参照
 	/// ---
-	/// `func setWhere(_ whereText: String, args: [Any?]) -> TableQuery`
-	///
+	/// ```
+	/// func setWhere(_ whereText: String, args: [Any?]) -> TableQuery
+	/// ```
 	/// - Parameters:
 	///   - whereText: 追加する条件
 	///   - args: 条件の中の「?」に対応するパラメータ達
 	/// - Returns: 自分のinstance
+	func whereAnd(_ whereText: String, _ args: Any?...) -> TableQuery {
+		return whereAnd(whereText, args: args)
+	}
+	/// 参照
+	/// ---
+	/// ```
+	/// func whereAnd(_ whereText: String, args: Any?...) -> TableQuery
+	/// ```
 	func whereAnd(_ whereText: String, args: [Any?]) -> TableQuery {
 		if sqlWhere.isEmpty {
 			sqlWhere = "(\(whereText))"
@@ -770,10 +927,11 @@ class TableQuery {
 	
 	/// ORDER BY句に並べ条件を追加する
 	///
+	/// 結果をソートする
 	/// ```
 	/// // SELECT * from account ORDER BY joinDate DESC, name ASC
 	/// let cursor = SQuery("user.db").from("account")?
-	/// 	.orderBy("joinDate", false)
+	/// 	.orderBy("joinDate", asc: false)
 	/// 	.orderBy("name")
 	/// 	.select()
 	///
@@ -798,6 +956,7 @@ class TableQuery {
 	
 	/// ORDER BY句全体を作成する
 	///
+	/// 結果をソートする
 	/// ```
 	/// // SELECT * from account ORDER BY joinDate DESC, name ASC
 	/// let cursor = SQuery("user.db").from("account")?
@@ -815,7 +974,9 @@ class TableQuery {
 	/// HAVING条件なしのGROUP BY句を作成する
 	/// 参照
 	/// ---
-	/// `func groupBy(_ cols: [String], having: String, args: [Any?]) -> TableQuery`
+	/// ```
+	/// func groupBy(_ cols: [String], having: String, args: Any?...) -> TableQuery
+	/// ```
 	///
 	/// - Parameter cols: GROUP BYするcolumn達
 	/// - Returns: 自分のinstance
@@ -826,19 +987,23 @@ class TableQuery {
 		return self
 	}
 	/// GROUP BY句を作成する
-	/// 参照
-	/// ---
-	/// `func groupBy(_ cols: [String], having: String, args: [Any?]) -> TableQuery`
-	func groupBy(_ cols: [String], having: String, args: Any?...) -> TableQuery {
-		return groupBy(cols, having: having, args: args)
-	}
-	/// GROUP BY句を作成する
+	///
+	/// 結果をcolumnでグループ化する
 	///
 	/// - Parameters:
 	///   - cols: GROUP BYするcolumn達
 	///   - having: HAVING条件
 	///   - args: HAVING条件の「?」に対応するパラメーター
 	/// - Returns: 自分のinstance
+	func groupBy(_ cols: [String], having: String, args: Any?...) -> TableQuery {
+		return groupBy(cols, having: having, args: args)
+	}
+	/// GROUP BY句を作成する
+	/// 参照
+	/// ---
+	/// ```
+	/// func groupBy(_ cols: [String], having: String, args: Any?...) -> TableQuery
+	/// ```
 	func groupBy(_ cols: [String], having: String, args: [Any?]) -> TableQuery {
 		sqlGroupByCols = cols
 		sqlHaving = having
@@ -846,25 +1011,59 @@ class TableQuery {
 		return self
 	}
 
+	/// LIMIT区を作成する
+	///
+	/// 結果として返されるrow(行)数を制限する
+	/// ```
+	/// // SELECT * FROM scroe ORDER BY point DESC LIMIT \(pageOffset),10
+	/// let pageOffset = (pageNo-1)*10
+	/// let cursor = SQuery("user.db").from("score")?
+	/// 	.orderBy("point", asc: false)
+	/// 	.limit(10, offset: pageOffset)
+	/// 	.select()
+	/// ```
+	/// - Parameters:
+	///   - count: 最大の行数
+	///   - offset: スタート位置(0 base)
+	/// - Returns: 自分のinstance
 	func limit(_ count: Int, offset: Int = 0) -> TableQuery {
 		sqlLimitCount = count
 		sqlLimitOffset = offset
 		return self
 	}
 	
+	/// 参照
+	/// ---
+	/// ```
+	/// func columns(columns: String...) -> TableQuery
+	/// ```
 	func columns(columns: [String]) -> TableQuery {
 		sqlColumns = columns
 		return self
 	}
+	/// SELECTで習得するcolumn達を指定する
+	///
+	/// - Parameter columns: column名（複数指定可）、省略すると「すべてのcolumn」
+	/// - Returns: 自分のinstance
 	func columns(_ columns: String...) -> TableQuery {
 		sqlColumns = columns
 		return self
 	}
 	
+	/// Tableのキー(key)のcolumnを指定する
+	///
+	/// `update()`時、キーのcolumnは修正内容から自動で外される
+	/// - Parameter cols: キーのcomunn達
+	/// - Returns: 自分のinstance
 	func keys(_ cols: String...) -> TableQuery {
 		sqlKeyColumns = cols
 		return self
 	}
+	/// 参照
+	/// ---
+	/// ```
+	/// func keys(columns cols: String...) -> TableQuery
+	/// ```
 	func keys(columns cols: [String]) -> TableQuery {
 		sqlKeyColumns = cols
 		return self
@@ -872,6 +1071,13 @@ class TableQuery {
 
 	//--- SELECT ---
 	
+	/// SELECT用のクエリ文を作成する
+	///
+	/// 現在の設定値(WHERE, ORDER BY, LIMIT など)でSELECTクエリ文を作成する
+	/// - Parameter forCount:
+	///   1) true = `count()`用のクエリを作る　例) SELECT count(*) ...
+	///   2) false = `select()`用のクエリを作る (default)
+	/// - Returns: クエリ文
 	private func makeQuerySql(forCount: Bool = false) -> String {
 		// SELECT
 		var sql = "SELECT "
@@ -949,20 +1155,25 @@ class TableQuery {
 		return sql
 	}
 	
-	func select(_ cols: String...) -> SQLiteCursor {
-		return select(columns: cols)
-	}
-	func select(columns cols: [String]) -> SQLiteCursor {
-		if !cols.isEmpty {
-			let _ = self.columns(columns: cols)
-		}
-		return select()
-	}
-	
+	/// クエリ(SELECT)を実行し、その結果をCurosrオブジェクトで返す
+	///
+	/// 参照
+	/// ---
+	/// - distnict()
+	/// - columns()
+	/// - join()
+	/// - setWhere(), whereAnd()
+	/// - groupBy(), setGroupBy()
+	/// - orderBy(), setOrderBy()
+	/// - limit()
+	/// ```
+	/// class SQLiteCursor
+	/// ```
+	///
+	/// - Returns: クエリの結果(Curosr)
 	func select() -> SQLiteCursor {
 		let sql = makeQuerySql()
 		let args = sqlJoinOnArgs + sqlWhereArgs + sqlHavingArgs
-		
 		return db.query(sql: sql, args: args)
 	}
 	
@@ -978,28 +1189,14 @@ class TableQuery {
 		}
 	}
 
-	func select<T: SQueryRow>(factory: ()->T, _ cols: String...) -> [T] {
-		return select(factory: factory, columns: cols)
-	}
-	func select<T: SQueryRow>(factory: ()->T, columns cols: [String]) -> [T] {
-		if !cols.isEmpty {
-			let _ = self.columns(columns: cols)
-		}
-		
+	func select<T: SQueryRow>(factory: ()->T) -> [T] {
 		var rows = [T].init()
 		select(factory: factory) { row in rows.append(row) }
 		return rows;
 	}
 	
-	func selectOne<T: SQueryRow>(factory: ()->T, _ cols: String...) -> T? {
-		return selectOne(factory: factory, columns: cols)
-	}
-	func selectOne<T: SQueryRow>(factory: ()->T, columns cols: [String]) -> T? {
-		if !cols.isEmpty {
-			let _ = self.columns(columns: cols)
-		}
-		
-		let rows = limit(1).select(factory: factory, columns: cols)
+	func selectOne<T: SQueryRow>(factory: ()->T) -> T? {
+		let rows = limit(1).select(factory: factory)
 		return rows.isEmpty ? nil : rows[0]
 	}
 	
@@ -1053,22 +1250,24 @@ class TableQuery {
 	
 	//--- UPDATE ---
 	func update(autoMakeWhere: Bool = true) -> Int {
+		return update(set: sqlValues, autoMakeWhere: autoMakeWhere)
+	}
+	func update(set values: Dictionary<String,Any>, autoMakeWhere: Bool = true) -> Int {
 		var sql = "UPDATE \(tableName) SET "
 		var args = [Any?]()
 		var first = true
-		for (colName, value) in sqlValues {
+		for (colName, value) in values {
 			if first { first = false } else {
 				sql.append(",")
 			}
-			
 			sql.append("`\(colName)`=?")
 			args.append(value)
 		}
 		
 		if sqlWhere.isEmpty && autoMakeWhere {
 			for key in sqlKeyColumns {
-				if let _ = sqlValues.index(forKey: key) {
-					let value = sqlValues[key]
+				if let _ = values.index(forKey: key) {
+					let value = values[key]
 					let _ = whereAnd("`\(key)`=?", value)
 				}
 			}
