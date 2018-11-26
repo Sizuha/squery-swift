@@ -2,6 +2,8 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
+//  Version: 0.1
+//
 //	require library: libsqlite3.tbd
 //
 
@@ -43,217 +45,6 @@ private func printLog(_ text: String, _ args: CVarArg...) {
 	}
 }
 
-/**
-SQLiteのクエリの結果(row達)を探索する
-
-使い方
----
-
-rowを探索する
-```
-if let conn = SQuery("sample.db").open() {
-	let cursor = conn.query("SELECT * FROM user")
-	defer {
-		// Cursorの仕様が終わったら必ずcloseする!
-		cursor.close()
-		conn.close()
-	}
-	while cursor.next() {
-		// ...
-	}
-}
-```
-
-rowからデータを習得
-```
-if let tblAcc = SQuery("user.db").from("account") {
-	defer { tblAcc.close() }
-	if let cursor = tblAcc
-		.whereAnd("joinDate >= ", 2018)
-		.orderBy("joinDate")
-		.select("id,name,age,joinDate")
-	{
-		defer { cursor.close() }
-		let id = cursor.getString(0)
-		let name = cursor.getString(1)
-		let age = cursor.getInt(2)
-
-		let joindateRaw = cursor.getString(3)
-		let joinDate: Date? = joindateRaw != nil
-			? SQuery.dateTimeFormat.date(from: joindateRaw)
-			: nil
-		// ...
-	}
-}
-```
-*/
-class SQLiteCursor {
-	private var stmt: OpaquePointer? = nil
-	
-	private var columnCountRaw: Int32 = 0
-	var columnCount: Int {
-		return Int(columnCountRaw)
-	}
-	
-	private var columnNameMap = Dictionary<String,Int>()
-
-	/// Cursorオブジェクトを作成する。
-	/// 直接オブジェクトを作成する事は無く、SQLiteConnectionクラスから実行されたクエリの結果として作られる。
-	///
-	/// - Parameter stmt:
-	///   `sqlite3_prepare_v2()`もしくはSQLiteConnectionクラスの`prepare()`の戻り値
-	required init(_ stmt: OpaquePointer) {
-		self.stmt = stmt
-		columnCountRaw = sqlite3_column_count(stmt)
-		
-		for i in 0..<columnCountRaw {
-			let colName = getColumnNameRaw(i)
-			columnNameMap[colName] = Int(i)
-		}
-	}
-	
-	/// 初期状態に戻る。
-	/// rowをまた習得するには `next()` をコール。
-	func reset() {
-		sqlite3_reset(stmt)
-	}
-	
-	/// 次のrowを習得する
-	/// - Returns: rowがあったら**true**
-	func next() -> Bool {
-		let res = sqlite3_step(stmt)
-		switch res {
-		case SQLITE_ROW:
-			return true
-		case SQLITE_DONE:
-			return false
-		default:
-			return false
-		}
-	}
-	
-	/// Coursorの作業を完全に終了する。
-	/// 仕様が終わったCursorは必ず`close()`する事。
-	func close() {
-		if let stmt = stmt {
-			sqlite3_finalize(stmt)
-		}
-		stmt = nil
-	}
-	
-	/// column名で、Cursor内のindexを習得
-	///
-	/// - Parameters:
-	///   - name: column名
-	/// - Returns:
-	///   1) column名が存在する場合: columnのindex
-	///   2) 存在しない場合: nil
-	func getColumnIndex(name: String) -> Int? {
-		return columnNameMap[name]
-	}
-	
-	private func getColumnNameRaw(_ col: Int32) -> String {
-		return String(cString: sqlite3_column_name(stmt, col))
-	}
-	
-	/// columnのindexでcolumnの名前を習得
-	///
-	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   indexが存在する場合**column名**、存在しない場合**nil**を返す
-	func getColumnName(_ col: Int) -> String? {
-		for (colName, colIdx) in columnNameMap {
-			if colIdx == col {
-				return colName
-			}
-		}
-		return nil
-	}
-	
-	/// 各column毎に処理を行う。
-	///
-	/// - Parameter each: 各column毎で呼ばれるClosure。
-	/// - Parameter cursor: Coursorオブジェクト（自身）
-	/// - Parameter index: 現在のcolumnのindex
-	func forEachColumn(_ each: (_ cursor: SQLiteCursor, _ index: Int)->Void) {
-		for i in 0..<columnCount {
-			each(self, i)
-		}
-	}
-	
-	//--- get Datas ---
-
-	/// columnのデータが**nil**か確認
-	///
-	/// - Parameter col: columnのindex
-	/// - Returns: **nil**の場合**true**
-	func isNull(_ col: Int) -> Bool {
-		let dataType = sqlite3_column_type(stmt, Int32(col))
-		return dataType == SQLITE_NULL
-	}
-	
-	/// columnから32bitのInt型データを習得
-	///
-	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   1) データが**NULL**の場合: nil
-	///   2) それ以外: Int型の値
-	func getInt(_ col: Int) -> Int? {
-		return isNull(col)
-			? nil
-			: Int(sqlite3_column_int(stmt, Int32(col)))
-	}
-	
-	/// columnからInt64型データを習得
-	///
-	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   1) データが**NULL**の場合: nil
-	///   2) それ以外: Int64型の値
-	func getInt64(_ col: Int) -> Int64? {
-		return isNull(col)
-			? nil
-			: Int64(sqlite3_column_int64(stmt, Int32(col)))
-	}
-
-	func getString(_ col: Int) -> String? {
-		return isNull(col)
-			? nil
-			: String(cString: sqlite3_column_text(stmt, Int32(col)))
-	}
-	
-	func getDouble(_ col: Int) -> Double? {
-		return isNull(col)
-			? nil
-			: sqlite3_column_double(stmt, Int32(col))
-	}
-	
-	func getFloat(_ col: Int) -> Float? {
-		if let value = getDouble(col) {
-			return Float(value)
-		}
-		return nil
-	}
-	
-	func getBool(_ col: Int) -> Bool? {
-		return isNull(col)
-			? nil
-			: getInt(col) != 0
-	}
-	
-	func getBlob(_ col: Int) -> [UInt8]? {
-		guard !isNull(col) else { return nil }
-		if let data = sqlite3_column_blob(stmt, Int32(col)) {
-			return data.load(as: [UInt8].self)
-		}
-		return nil
-	}
-	
-	func getBlobRaw(_ col: Int) -> UnsafeRawPointer {
-		return sqlite3_column_blob(stmt, Int32(col))
-	}
-	
-}
 
 /**
 SQLite DBを操作するクラス。
@@ -468,6 +259,218 @@ class SQLiteConnection {
 	}
 }
 
+
+/**
+SQLiteのクエリの結果(row達)を探索する
+
+使い方
+---
+
+rowを探索する
+```
+if let conn = SQuery("sample.db").open() {
+let cursor = conn.query("SELECT * FROM user")
+  defer {
+    // Cursorの仕様が終わったら必ずcloseする!
+    cursor.close()
+    conn.close()
+  }
+  while cursor.next() {
+    // ...
+  }
+}
+```
+
+rowからデータを習得
+```
+if let tblAcc = SQuery("user.db").from("account") {
+  defer { tblAcc.close() }
+  if let cursor = tblAcc
+    .whereAnd("joinDate >= ", 2018)
+    .orderBy("joinDate")
+    .select("id,name,age,joinDate")
+  {
+    defer { cursor.close() }
+    let id = cursor.getString(0)
+    let name = cursor.getString(1)
+    let age = cursor.getInt(2)
+
+    let joindateRaw = cursor.getString(3)
+    let joinDate: Date? = joindateRaw != nil
+      ? SQuery.dateTimeFormat.date(from: joindateRaw)
+      : nil
+    // ...
+  }
+}
+```
+*/
+class SQLiteCursor {
+	private var stmt: OpaquePointer? = nil
+	
+	private var columnCountRaw: Int32 = 0
+	var columnCount: Int {
+		return Int(columnCountRaw)
+	}
+	
+	private var columnNameMap = Dictionary<String,Int>()
+	
+	/// Cursorオブジェクトを作成する。
+	/// 直接オブジェクトを作成する事は無く、SQLiteConnectionクラスから実行されたクエリの結果として作られる。
+	///
+	/// - Parameter stmt:
+	///   `sqlite3_prepare_v2()`もしくはSQLiteConnectionクラスの`prepare()`の戻り値
+	required init(_ stmt: OpaquePointer) {
+		self.stmt = stmt
+		columnCountRaw = sqlite3_column_count(stmt)
+		
+		for i in 0..<columnCountRaw {
+			let colName = getColumnNameRaw(i)
+			columnNameMap[colName] = Int(i)
+		}
+	}
+	
+	/// 初期状態に戻る。
+	/// rowをまた習得するには `next()` をコール。
+	func reset() {
+		sqlite3_reset(stmt)
+	}
+	
+	/// 次のrowを習得する
+	/// - Returns: rowがあったら**true**
+	func next() -> Bool {
+		let res = sqlite3_step(stmt)
+		switch res {
+		case SQLITE_ROW:
+			return true
+		case SQLITE_DONE:
+			return false
+		default:
+			return false
+		}
+	}
+	
+	/// Coursorの作業を完全に終了する。
+	/// 仕様が終わったCursorは必ず`close()`する事。
+	func close() {
+		if let stmt = stmt {
+			sqlite3_finalize(stmt)
+		}
+		stmt = nil
+	}
+	
+	/// column名で、Cursor内のindexを習得
+	///
+	/// - Parameters:
+	///   - name: column名
+	/// - Returns:
+	///   1) column名が存在する場合: columnのindex
+	///   2) 存在しない場合: nil
+	func getColumnIndex(name: String) -> Int? {
+		return columnNameMap[name]
+	}
+	
+	private func getColumnNameRaw(_ col: Int32) -> String {
+		return String(cString: sqlite3_column_name(stmt, col))
+	}
+	
+	/// columnのindexでcolumnの名前を習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns:
+	///   indexが存在する場合**column名**、存在しない場合**nil**を返す
+	func getColumnName(_ col: Int) -> String? {
+		for (colName, colIdx) in columnNameMap {
+			if colIdx == col {
+				return colName
+			}
+		}
+		return nil
+	}
+	
+	/// 各column毎に処理を行う。
+	///
+	/// - Parameter each: 各column毎で呼ばれるClosure。
+	/// - Parameter cursor: Coursorオブジェクト（自身）
+	/// - Parameter index: 現在のcolumnのindex
+	func forEachColumn(_ each: (_ cursor: SQLiteCursor, _ index: Int)->Void) {
+		for i in 0..<columnCount {
+			each(self, i)
+		}
+	}
+	
+	//--- get Datas ---
+	
+	/// columnのデータが**nil**か確認
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns: **nil**の場合**true**
+	func isNull(_ col: Int) -> Bool {
+		let dataType = sqlite3_column_type(stmt, Int32(col))
+		return dataType == SQLITE_NULL
+	}
+	
+	/// columnから32bitのInt型データを習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns:
+	///   1) データが**NULL**の場合: nil
+	///   2) それ以外: Int型の値
+	func getInt(_ col: Int) -> Int? {
+		return isNull(col)
+			? nil
+			: Int(sqlite3_column_int(stmt, Int32(col)))
+	}
+	
+	/// columnからInt64型データを習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns:
+	///   1) データが**NULL**の場合: nil
+	///   2) それ以外: Int64型の値
+	func getInt64(_ col: Int) -> Int64? {
+		return isNull(col)
+			? nil
+			: Int64(sqlite3_column_int64(stmt, Int32(col)))
+	}
+	
+	func getString(_ col: Int) -> String? {
+		return isNull(col)
+			? nil
+			: String(cString: sqlite3_column_text(stmt, Int32(col)))
+	}
+	
+	func getDouble(_ col: Int) -> Double? {
+		return isNull(col)
+			? nil
+			: sqlite3_column_double(stmt, Int32(col))
+	}
+	
+	func getFloat(_ col: Int) -> Float? {
+		if let value = getDouble(col) {
+			return Float(value)
+		}
+		return nil
+	}
+	
+	func getBool(_ col: Int) -> Bool? {
+		return isNull(col)
+			? nil
+			: getInt(col) != 0
+	}
+	
+	func getBlob(_ col: Int) -> [UInt8]? {
+		guard !isNull(col) else { return nil }
+		if let data = sqlite3_column_blob(stmt, Int32(col)) {
+			return data.load(as: [UInt8].self)
+		}
+		return nil
+	}
+	
+	func getBlobRaw(_ col: Int) -> UnsafeRawPointer {
+		return sqlite3_column_blob(stmt, Int32(col))
+	}
+}
+
 /**
 SQLite DBをべ便利に扱う為のライブラリ
 
@@ -643,38 +646,38 @@ SQLite DBの一つのTableに対して、クエリ分を作成し、実行する
 Rowデータのオブジェクト（例）
 ```
 class Account: SQueryRow {
-	var id = ""
-	var pass = ""
-	var name = ""
-	var age = 0
-	var joinDate: Date? = nil
+  var id = ""
+  var pass = ""
+  var name = ""
+  var age = 0
+  var joinDate: Date? = nil
 
-	func loadFrom(cursor: SQLiteCursor) {
-		cursor.forEachColumn { cursor, index in
-			let colName = cursor.getColumnName(index)
-			switch colName {
-			case "id":
-				id = cursor.getString(index)
-			case "pwd":
-				pass = cursor.getString(index)
-			case "name":
-				name = cursor.getString(index)
-			case "age":
-				age = cursor.getInt(index)
-			case "join_date":
-				joinDate: Date? = joindateRaw != nil
-					? SQuery.dateTimeFormat.date(from: joindateRaw)
-					: nil
-			}
-		}
-	}
+  func loadFrom(cursor: SQLiteCursor) {
+    cursor.forEachColumn { cursor, index in
+      let colName = cursor.getColumnName(index)
+      switch colName {
+      case "id":
+        id = cursor.getString(index)
+      case "pwd":
+        pass = cursor.getString(index)
+      case "name":
+        name = cursor.getString(index)
+      case "age":
+        age = cursor.getInt(index)
+      case "join_date":
+        joinDate: Date? = joindateRaw != nil
+          ? SQuery.dateTimeFormat.date(from: joindateRaw)
+          : nil
+      }
+    }
+  }
 
-	func toValues() -> Dictionary<String,Any> {
-		return [
-			"id": id, "pwd": pass, "name": name, "age": age,
-			"join_date": SQuery.dateTimeFormat.string(joinDate)
-		]
-	}
+  func toValues() -> Dictionary<String,Any> {
+	return [
+      "id": id, "pwd": pass, "name": name, "age": age,
+      "join_date": SQuery.dateTimeFormat.string(joinDate)
+    ]
+  }
 }
 ```
 
@@ -683,14 +686,14 @@ SELECT
 ```
 // SELECT id, name, age FROM account WHERE age < 18 ORDER BY age DESC
 if let tableAcc = SQuery("user.db").from("account") {
-	defer { tableAcc.close()  }
-	let rows = tableAcc
-		.columns("id","name","age") //省略すると「all columns」
-		.setWhere("age < ?", 18)
-		.orderBy(age, asc: false)
-		.select { Account() }
+  defer { tableAcc.close()  }
+  let rows = tableAcc
+    .columns("id","name","age") //省略すると「all columns」
+    .setWhere("age < ?", 18)
+    .orderBy(age, asc: false)
+    .select { Account() }
 
-	for row in rows { ... }
+  for row in rows { ... }
 }
 ```
 
@@ -699,8 +702,8 @@ SELECT One
 ```
 // SELECT * account ORDER BY age DESC LIMIT 1
 let oldest: Account = tableAcc
-	.orderBy(age, asc: false)
-	.selectOne { Account() }
+  .orderBy(age, asc: false)
+  .selectOne { Account() }
 ```
 
 COUNT
@@ -883,13 +886,13 @@ class TableQuery {
 	/// ```
 	/// // SELECT count(*) FROM account WHERE id=\(id) AND pass=\(pwd)
 	/// let cursor = SQuery("user.db").from("account")?
-	/// 	.setWhere("id=? AND pass=?", id, pwd)
-	/// 	.select()
+	///   .setWhere("id=? AND pass=?", id, pwd)
+	///   .select()
 	///
 	/// // UPDATE account SET pass=\(newPwd) WHERE id=\(id)
 	/// if let table = SQuery("user.db").from("account") {
-	/// 	table.setWhere("id=?", id).update(set: ["pass":newPwd])
-	/// 	table.close()
+	///   table.setWhere("id=?", id).update(set: ["pass":newPwd])
+	///   table.close()
 	/// }
 	/// ```
 	///
@@ -920,16 +923,16 @@ class TableQuery {
 	/// ```
 	/// // SELECT count(*) FROM account WHERE (id=\(id)) AND (pass=\(pwd))
 	/// let loginOk = SQuery("user.db").from("account")?
-	/// 	.setWhere("id=?", id)
-	/// 	.whereAnd("pass=?", pwd)
-	/// 	.count() == 1
+	///   .setWhere("id=?", id)
+	///   .whereAnd("pass=?", pwd)
+	///   .count() == 1
 	/// ```
 	/// `setWhere()`を使わずに`whereAnd()`だけでWHERE句を作成することもできる
 	/// ```
 	/// let loginOk = SQuery("user.db").from("account")?
-	/// 	.whereAnd("id=?", id)
-	/// 	.whereAnd("pass=?", pwd)
-	/// 	.count() == 1
+	///   .whereAnd("id=?", id)
+	///   .whereAnd("pass=?", pwd)
+	///   .count() == 1
 	/// ```
 	///
 	/// 参照
@@ -970,9 +973,9 @@ class TableQuery {
 	/// ```
 	/// // SELECT * from account ORDER BY joinDate DESC, name ASC
 	/// let cursor = SQuery("user.db").from("account")?
-	/// 	.orderBy("joinDate", asc: false)
-	/// 	.orderBy("name")
-	/// 	.select()
+	///   .orderBy("joinDate", asc: false)
+	///   .orderBy("name")
+	///   .select()
 	///
 	/// ```
 	/// - Parameters:
@@ -999,8 +1002,8 @@ class TableQuery {
 	/// ```
 	/// // SELECT * from account ORDER BY joinDate DESC, name ASC
 	/// let cursor = SQuery("user.db").from("account")?
-	/// 	.setOrderBy("joinDate DESC, name ASC")
-	/// 	.select()
+	///   .setOrderBy("joinDate DESC, name ASC")
+	///   .select()
 	///
 	/// ```
 	/// - Parameter orderByRaw: 自分のinstance
@@ -1057,9 +1060,9 @@ class TableQuery {
 	/// // SELECT * FROM scroe ORDER BY point DESC LIMIT \(pageOffset),10
 	/// let pageOffset = (pageNo-1)*10
 	/// let cursor = SQuery("user.db").from("score")?
-	/// 	.orderBy("point", asc: false)
-	/// 	.limit(10, offset: pageOffset)
-	/// 	.select()
+	///   .orderBy("point", asc: false)
+	///   .limit(10, offset: pageOffset)
+	///   .select()
 	/// ```
 	/// - Parameters:
 	///   - count: 最大の行数
@@ -1355,5 +1358,4 @@ class TableQuery {
 	func updateOrInsert(exceptInsert cols: [String] = []) -> Bool {
 		return update() > 0 || insert(except: cols)
 	}
-
 }
