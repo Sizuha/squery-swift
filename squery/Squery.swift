@@ -332,32 +332,26 @@ class SQLiteConnection {
 		switch arg {
 		case nil:
 			sqlite3_bind_null(stmt, idx)
-			break
 			
 		case is Int8, is Int16, is Int32:
 			sqlite3_bind_int(stmt, idx, arg as! Int32)
-			break
 			
 		case is Int, is Int64:
 			sqlite3_bind_int64(stmt, idx, arg as! Int64)
-			break
 			
 		case is [UInt8]:
 			let data = arg as! [UInt8]
 			sqlite3_bind_blob(stmt, idx, data, Int32(data.count), nil)
-			break
 			
 		case is Date:
 			let data = arg as! Date
 			let timestamp = SQuery.toTimestamp(data)
 			sqlite3_bind_int64(stmt, idx, timestamp)
-			break
 			
 		default:
 			let data = arg as! String
 			let length = Int32(data.lengthOfBytes(using: String.Encoding.utf8))
 			sqlite3_bind_text(stmt, idx, data, length, nil)
-			break
 		}
 		
 		return idx+1
@@ -610,20 +604,16 @@ class Account: SQueryRow {
 			switch colName {
 			case "id":
 				id = cursor.getString(index)
-				break
 			case "pwd":
 				pass = cursor.getString(index)
-				break
 			case "name":
 				name = cursor.getString(index)
-				break
 			case "age":
 				age = cursor.getInt(index)
 			case "join_date":
 				joinDate: Date? = joindateRaw != nil
 					? SQuery.dateTimeFormat.date(from: joindateRaw)
 					: nil
-				break
 			}
 		}
 	}
@@ -822,12 +812,10 @@ class TableQuery {
 		switch joinType {
 		case .cross:
 			sqlJoin = "CROSS JOIN"
-			break;
 		case .leftOuter:
 			sqlJoin = "LEFT OUTER JOIN"
 		default:
 			sqlJoin = "INNER JOIN"
-			break;
 		}
 
 		sqlJoinTables = tables
