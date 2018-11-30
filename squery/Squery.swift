@@ -587,7 +587,7 @@ public class SQuery {
 	/// ```
 	/// - Parameter table: Table名
 	/// - Returns: クエリを作成できる**TableQuery**オブジェクト
-	func from(table: String) -> TableQuery? {
+	func from(_ table: String) -> TableQuery? {
 		if let db = open() {
 			return TableQuery(db, table: table)
 		}
