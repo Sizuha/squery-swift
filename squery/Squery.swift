@@ -10,25 +10,25 @@
 import Foundation
 import SQLite3
 
-protocol SQueryRow {
+public protocol SQueryRow {
 	func loadFrom(cursor: SQLiteCursor)
-	func toValues() -> Dictionary<String,Any>
+	func toValues() -> Dictionary<String,Any?>
 }
 
-enum SQLiteOpenMode {
+public enum SQLiteOpenMode {
 	case readWriteCreate // rwc
 	case readWrite // rw
 	case readonly // ro
 	case memory // memory
 }
 
-enum SQLiteTransactionMode {
+public enum SQLiteTransactionMode {
 	case deferred
 	case immediate
 	case exclusive
 }
 
-enum SQueryJoin {
+public enum SQueryJoin {
 	case inner
 	case leftOuter
 	case cross
@@ -51,7 +51,7 @@ SQLite DBを操作するクラス。
 
 DBファイルを開いて、クエリを実行できる。
 */
-class SQLiteConnection {
+public class SQLiteConnection {
 	private var db: OpaquePointer? = nil
 	
 	required init(_ db: OpaquePointer) {
@@ -304,7 +304,7 @@ if let tblAcc = SQuery("user.db").from("account") {
 }
 ```
 */
-class SQLiteCursor {
+public class SQLiteCursor {
 	private var stmt: OpaquePointer? = nil
 	
 	private var columnCountRaw: Int32 = 0
@@ -499,7 +499,7 @@ db.close()
 class TableQuery
 ```
 */
-class SQuery {
+public class SQuery {
 	private var dataSource: String
 	private var dbConn: SQLiteConnection? = nil
 
@@ -754,7 +754,7 @@ tableAcc.setWhere("id=?",id).delete()
 ```
 
 */
-class TableQuery {
+public class TableQuery {
 	private let db: SQLiteConnection
 	private let tableName: String
 	
