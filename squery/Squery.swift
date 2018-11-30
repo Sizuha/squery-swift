@@ -780,7 +780,7 @@ public class TableQuery {
 	private var sqlColumns = [String]()
 	private var sqlKeyColumns = [String]()
 	
-	private var sqlValues = Dictionary<String,Any>()
+	private var sqlValues = Dictionary<String,Any?>()
 	
 	/// DBからTableを指定て、instanceを作る
 	///
@@ -1259,7 +1259,7 @@ public class TableQuery {
 	func values(_ row: SQueryRow) -> TableQuery {
 		return values(row.toValues())
 	}
-	func values(_ data: Dictionary<String,Any>) -> TableQuery {
+	func values(_ data: Dictionary<String,Any?>) -> TableQuery {
 		sqlValues = data
 		return self
 	}
@@ -1267,7 +1267,7 @@ public class TableQuery {
 	func insert(values row: SQueryRow, except cols: [String] = []) -> Bool {
 		return values(row).insert(except: cols)
 	}
-	func insert(values data: Dictionary<String,Any>, except cols: [String] = []) -> Bool {
+	func insert(values data: Dictionary<String,Any?>, except cols: [String] = []) -> Bool {
 		return values(data).insert(except: cols)
 	}
 	
@@ -1302,7 +1302,7 @@ public class TableQuery {
 	func update(autoMakeWhere: Bool = true) -> Int {
 		return update(set: sqlValues, autoMakeWhere: autoMakeWhere)
 	}
-	func update(set values: Dictionary<String,Any>, autoMakeWhere: Bool = true) -> Int {
+	func update(set values: Dictionary<String,Any?>, autoMakeWhere: Bool = true) -> Int {
 		var sql = "UPDATE \(tableName) SET "
 		var args = [Any?]()
 		var first = true
@@ -1318,7 +1318,7 @@ public class TableQuery {
 			for key in sqlKeyColumns {
 				if let _ = values.index(forKey: key) {
 					let value = values[key]
-					let _ = whereAnd("`\(key)`=?", value)
+					let _ = whereAnd("`\(key)`=?", value ?? nil)
 				}
 			}
 		}
