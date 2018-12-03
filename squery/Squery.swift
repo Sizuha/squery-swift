@@ -152,10 +152,13 @@ public class SQLiteConnection {
 			let timestamp = SQuery.toTimestamp(data)
 			sqlite3_bind_int64(stmt, idx, timestamp)
 			
-		default:
+		case is String:
 			let data = arg as! String
 			let length = Int32(data.lengthOfBytes(using: String.Encoding.utf8))
 			sqlite3_bind_text(stmt, idx, data, length, nil)
+			
+		default:
+			break
 		}
 		
 		return idx+1
@@ -526,17 +529,22 @@ public class SQuery {
 		if !dbfile.starts(with: "file:") {
 			dataSource = "file:"
 			
-			let path = dbfile.starts(with: "/")
-				? dbfile
-				: NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+			var filePath: String
+			if dbfile.starts(with: "/") {
+				filePath = dbfile
+			}
+			else {
+				let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+				filePath = "\(path)/\(dbfile)"
+			}
 			
 			if let encoded =
-				path.addingPercentEncoding(withAllowedCharacters: NSCharacterSet.urlQueryAllowed)
+				filePath.addingPercentEncoding(withAllowedCharacters: NSCharacterSet.urlQueryAllowed)
 			{
 				dataSource.append(encoded)
 			}
 			else {
-				dataSource.append(path)
+				dataSource.append(filePath)
 			}
 		}
 		else {
@@ -554,6 +562,8 @@ public class SQuery {
 		default:
 			dataSource.append("rwc")
 		}
+		
+		printLog("[SQuery] data source: %@", dataSource)
 	}
 	
 	/// DBファイルを開く
@@ -704,10 +714,10 @@ public class TableCreator {
 		return self
 	}
 	
-	func create(ifNotExist: Bool = true) -> Bool {
+	func create(ifNotExists: Bool = true) -> Bool {
 		var sql = "CREATE TABLE "
-		if (ifNotExist) {
-			sql.append("IF NOT EXIST ")
+		if (ifNotExists) {
+			sql.append("IF NOT EXISTS ")
 		}
 		sql.append(tableName)
 		
