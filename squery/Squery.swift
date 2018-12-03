@@ -34,6 +34,14 @@ public enum SQueryJoin {
 	case cross
 }
 
+public enum SQLiteColumnType: String {
+	case text = "TEXT"
+	case numeric = "NUMERIC"
+	case integer = "INTEGER"
+	case float = "REAL"
+	case none = "NONE"
+}
+
 private var enableDebugMode = true
 public func setEnableSQueryDebug(_ flag: Bool = true) {
 	enableDebugMode = false
@@ -594,6 +602,13 @@ public class SQuery {
 		return nil
 	}
 	
+	func tableCreator(name: String) -> TableCreator? {
+		if let db = open() {
+			return TableCreator(db: db, name: name)
+		}
+		return nil
+	}
+	
 	
 	//--- Utils ---
 	
@@ -637,6 +652,111 @@ public class SQuery {
 	
 	static func toDate(timestamp: Int64) -> Date {
 		return Date(timeIntervalSince1970: TimeInterval(timestamp))
+	}
+}
+
+public class TableCreator {
+	private let db: SQLiteConnection
+	private let tableName: String
+	
+	private class ColumnOption {
+		var type: SQLiteColumnType = .none
+		var autoInc = false
+		var pk = false
+		var notNull = false
+		var unique = false
+	}
+	
+	private var columns = [String:ColumnOption]()
+	
+	init(db: SQLiteConnection, name: String) {
+		self.tableName = name
+		self.db = db
+	}
+	
+	func addAutoInc(_ name: String) -> TableCreator {
+		let colDef = ColumnOption()
+		colDef.type = .integer
+		colDef.autoInc = true
+		colDef.pk = true
+		colDef.unique = true
+		colDef.notNull = true
+		columns[name] = colDef
+		return self
+	}
+	
+	func addPrimaryKey(_ name: String, type: SQLiteColumnType) -> TableCreator {
+		let colDef = ColumnOption()
+		colDef.type = type
+		colDef.pk = true
+		colDef.unique = true
+		colDef.notNull = true
+		columns[name] = colDef
+		return self
+	}
+	
+	func addColumn(_ name: String, type: SQLiteColumnType, notNull: Bool = false, unique: Bool = false) -> TableCreator {
+		let colDef = ColumnOption()
+		colDef.type = type
+		colDef.notNull = notNull
+		colDef.unique = unique
+		columns[name] = colDef
+		return self
+	}
+	
+	func create(ifNotExist: Bool = true) -> Bool {
+		var sql = "CREATE TABLE `\(tableName)` "
+		
+		if (ifNotExist) {
+			sql.append("IF NOT EXIST ")
+		}
+		
+		var keys = [String]()
+		for (colName,colDef) in columns {
+			if colDef.autoInc {
+				keys.removeAll()
+				keys.append(colName)
+				break
+			}
+			else if colDef.pk {
+				keys.append(colName)
+			}
+		}
+		
+		let isSinglePk = keys.count == 1
+		var first = true
+		sql.append("(")
+		for (colName,colDef) in columns {
+			if first { first = false } else { sql.append(",") }
+			
+			sql.append("`\(colName)` \(colDef.type.rawValue) ")
+			
+			if isSinglePk {
+				if colDef.pk {
+					sql.append("PRIMARY KEY")
+				}
+				if colDef.autoInc {
+					sql.append(" AUTOINCREMENT")
+				}
+			}
+		}
+		
+		if !keys.isEmpty && !isSinglePk {
+			sql.append(", PRIMARY KEY(")
+			first = true
+			for colName in keys {
+				if first { first = false } else { sql.append(",") }
+				sql.append("`\(colName)`")
+			}
+			sql.append("0")
+		}
+		
+		sql.append(");")
+		return db.execute(sql: sql)
+	}
+	
+	func close() {
+		db.close()
 	}
 }
 
@@ -1301,6 +1421,9 @@ public class TableQuery {
 	//--- UPDATE ---
 	func update(autoMakeWhere: Bool = true) -> Int {
 		return update(set: sqlValues, autoMakeWhere: autoMakeWhere)
+	}
+	func update(set values: SQueryRow, autoMakeWhere: Bool = true) -> Int {
+		return update(set: values.toValues(), autoMakeWhere: autoMakeWhere)
 	}
 	func update(set values: Dictionary<String,Any?>, autoMakeWhere: Bool = true) -> Int {
 		var sql = "UPDATE \(tableName) SET "
