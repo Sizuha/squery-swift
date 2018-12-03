@@ -731,12 +731,22 @@ public class TableCreator {
 			
 			sql.append("`\(colName)` \(colDef.type.rawValue) ")
 			
-			if isSinglePk {
-				if colDef.pk {
-					sql.append("PRIMARY KEY")
+			if colDef.pk {
+				if isSinglePk {
+					if colDef.pk {
+						sql.append("PRIMARY KEY")
+					}
+					if colDef.autoInc {
+						sql.append(" AUTOINCREMENT")
+					}
 				}
-				if colDef.autoInc {
-					sql.append(" AUTOINCREMENT")
+			}
+			else {
+				if colDef.notNull {
+					sql.append(" NOT NULL")
+				}
+				if colDef.unique {
+					sql.append(" UNIQUE")
 				}
 			}
 		}
