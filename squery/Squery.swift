@@ -44,7 +44,7 @@ public enum SQLiteColumnType: String {
 
 private var enableDebugMode = true
 public func setEnableSQueryDebug(_ flag: Bool = true) {
-	enableDebugMode = false
+	enableDebugMode = flag
 }
 
 private func printLog(_ text: String, _ args: CVarArg...) {
@@ -93,13 +93,7 @@ public class SQLiteConnection {
 	}
 	
 	private func prepare(sql: String, _ args: Any?...) -> OpaquePointer? {
-		printLog("prepare sql: \(sql)")
-		
-		var stmt: OpaquePointer? = nil
-		if sqlite3_prepare_v2(db, sql, Int32(sql.utf8.count), &stmt, nil) == SQLITE_OK {
-			bindAll(stmt, args)
-		}
-		return stmt
+		return prepare(sql: sql, args: args)
 	}
 	private func prepare(sql: String, args: [Any?]) -> OpaquePointer? {
 		printLog("prepare sql: \(sql)")
