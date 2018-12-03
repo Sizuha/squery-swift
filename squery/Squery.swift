@@ -705,11 +705,11 @@ public class TableCreator {
 	}
 	
 	func create(ifNotExist: Bool = true) -> Bool {
-		var sql = "CREATE TABLE \(tableName) "
-		
+		var sql = "CREATE TABLE "
 		if (ifNotExist) {
 			sql.append("IF NOT EXIST ")
 		}
+		sql.append(tableName)
 		
 		var keys = [String]()
 		for (colName,colDef) in columns {
@@ -725,7 +725,7 @@ public class TableCreator {
 		
 		let isSinglePk = keys.count == 1
 		var first = true
-		sql.append("(")
+		sql.append(" (")
 		for (colName,colDef) in columns {
 			if first { first = false } else { sql.append(",") }
 			
