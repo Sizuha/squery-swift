@@ -705,7 +705,7 @@ public class TableCreator {
 	}
 	
 	func create(ifNotExist: Bool = true) -> Bool {
-		var sql = "CREATE TABLE `\(tableName)` "
+		var sql = "CREATE TABLE \(tableName) "
 		
 		if (ifNotExist) {
 			sql.append("IF NOT EXIST ")
@@ -729,12 +729,12 @@ public class TableCreator {
 		for (colName,colDef) in columns {
 			if first { first = false } else { sql.append(",") }
 			
-			sql.append("`\(colName)` \(colDef.type.rawValue) ")
+			sql.append("\(colName) \(colDef.type.rawValue)")
 			
 			if colDef.pk {
 				if isSinglePk {
 					if colDef.pk {
-						sql.append("PRIMARY KEY")
+						sql.append(" PRIMARY KEY")
 					}
 					if colDef.autoInc {
 						sql.append(" AUTOINCREMENT")
@@ -756,9 +756,9 @@ public class TableCreator {
 			first = true
 			for colName in keys {
 				if first { first = false } else { sql.append(",") }
-				sql.append("`\(colName)`")
+				sql.append(colName)
 			}
-			sql.append("0")
+			sql.append(")")
 		}
 		
 		sql.append(");")
