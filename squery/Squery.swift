@@ -4,7 +4,7 @@
 //
 //  Version: 0.1
 //
-//	require library: libsqlite3.tbd
+//  Require Library: libsqlite3.tbd
 //
 
 import Foundation
@@ -136,6 +136,10 @@ public class SQLiteConnection {
 			
 		case is Int, is Int64:
 			sqlite3_bind_int64(stmt, idx, arg as! Int64)
+			
+		case is Bool:
+			let data = arg as! Bool
+			sqlite3_bind_int(stmt, idx, data ? 1 : 0)
 			
 		case is [UInt8]:
 			let data = arg as! [UInt8]
@@ -557,7 +561,7 @@ public class SQuery {
 			dataSource.append("rwc")
 		}
 		
-		printLog("[SQuery] data source: %@", dataSource)
+		printLog("[SQuery] data source: \(dataSource)")
 	}
 	
 	/// DBファイルを開く
@@ -663,7 +667,13 @@ public class TableCreator {
 	private let db: SQLiteConnection
 	private let tableName: String
 	
-	private class ColumnOption {
+	private class ColumnDefine {
+		let name: String
+		
+		init(_ name: String) {
+			self.name = name
+		}
+		
 		var type: SQLiteColumnType = .none
 		var autoInc = false
 		var pk = false
@@ -671,7 +681,7 @@ public class TableCreator {
 		var unique = false
 	}
 	
-	private var columns = [String:ColumnOption]()
+	private var columns = [ColumnDefine]()
 	
 	init(db: SQLiteConnection, name: String) {
 		self.tableName = name
@@ -679,32 +689,32 @@ public class TableCreator {
 	}
 	
 	func addAutoInc(_ name: String) -> TableCreator {
-		let colDef = ColumnOption()
+		let colDef = ColumnDefine(name)
 		colDef.type = .integer
 		colDef.autoInc = true
 		colDef.pk = true
 		colDef.unique = true
 		colDef.notNull = true
-		columns[name] = colDef
+		columns.append(colDef)
 		return self
 	}
 	
 	func addPrimaryKey(_ name: String, type: SQLiteColumnType) -> TableCreator {
-		let colDef = ColumnOption()
+		let colDef = ColumnDefine(name)
 		colDef.type = type
 		colDef.pk = true
 		colDef.unique = true
 		colDef.notNull = true
-		columns[name] = colDef
+		columns.append(colDef)
 		return self
 	}
 	
 	func addColumn(_ name: String, type: SQLiteColumnType, notNull: Bool = false, unique: Bool = false) -> TableCreator {
-		let colDef = ColumnOption()
+		let colDef = ColumnDefine(name)
 		colDef.type = type
 		colDef.notNull = notNull
 		colDef.unique = unique
-		columns[name] = colDef
+		columns.append(colDef)
 		return self
 	}
 	
@@ -716,40 +726,40 @@ public class TableCreator {
 		sql.append(tableName)
 		
 		var keys = [String]()
-		for (colName,colDef) in columns {
-			if colDef.autoInc {
+		for col in columns {
+			if col.autoInc {
 				keys.removeAll()
-				keys.append(colName)
+				keys.append(col.name)
 				break
 			}
-			else if colDef.pk {
-				keys.append(colName)
+			else if col.pk {
+				keys.append(col.name)
 			}
 		}
 		
 		let isSinglePk = keys.count == 1
 		var first = true
 		sql.append(" (")
-		for (colName,colDef) in columns {
+		for col in columns {
 			if first { first = false } else { sql.append(",") }
 			
-			sql.append("\(colName) \(colDef.type.rawValue)")
+			sql.append("\(col.name) \(col.type.rawValue)")
 			
-			if colDef.pk {
+			if col.pk {
 				if isSinglePk {
-					if colDef.pk {
+					if col.pk {
 						sql.append(" PRIMARY KEY")
 					}
-					if colDef.autoInc {
+					if col.autoInc {
 						sql.append(" AUTOINCREMENT")
 					}
 				}
 			}
 			else {
-				if colDef.notNull {
+				if col.notNull {
 					sql.append(" NOT NULL")
 				}
-				if colDef.unique {
+				if col.unique {
 					sql.append(" UNIQUE")
 				}
 			}
@@ -887,6 +897,12 @@ DELETE
 tableAcc.setWhere("id=?",id).delete()
 ```
 
+DROP
+---
+```
+// DROP TABLE account
+tableAcc.drop()
+```
 */
 public class TableQuery {
 	private let db: SQLiteConnection
@@ -1273,7 +1289,7 @@ public class TableQuery {
 				if first { first = false } else {
 					sql.append(",")
 				}
-				sql.append("`\(col)`")
+				sql.append(col)
 			}
 		}
 		
@@ -1319,7 +1335,7 @@ public class TableQuery {
 		
 		// ORDER BY
 		if !sqlOrderBy.isEmpty {
-			sql.append(" ORDER BY \(sqlOrderBy) ")
+			sql.append(" ORDER BY \(sqlOrderBy)")
 		}
 		
 		// LIMIT
@@ -1485,6 +1501,11 @@ public class TableQuery {
 			return db.getLastChangedRowCount()
 		}
 		return 0
+	}
+	
+	//--- DROP ---
+	func drop() -> Bool {
+		return db.execute(sql: "DROP TABLE \(tableName);")
 	}
 
 	//--- INSERT or UPDATE ---
