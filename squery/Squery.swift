@@ -943,6 +943,8 @@ tableAcc.drop()
 */
 public class TableQuery {
 	private let db: SQLiteConnection
+	public var connection: SQLiteConnection { return db }
+	
 	private let tableName: String
 	
 	private var sqlDistnict = false
