@@ -408,13 +408,16 @@ public class SQLiteCursor {
 	
 	//--- get Datas ---
 	
+	private func getDataType(_ col: Int) -> Int32 {
+		return sqlite3_column_type(stmt, Int32(col))
+	}
+	
 	/// columnのデータが**nil**か確認
 	///
 	/// - Parameter col: columnのindex
 	/// - Returns: **nil**の場合**true**
 	public func isNull(_ col: Int) -> Bool {
-		let dataType = sqlite3_column_type(stmt, Int32(col))
-		return dataType == SQLITE_NULL
+		return getDataType(col) == SQLITE_NULL
 	}
 	
 	/// columnから32bitのInt型データを習得
@@ -476,6 +479,41 @@ public class SQLiteCursor {
 	
 	public func getBlobRaw(_ col: Int) -> UnsafeRawPointer {
 		return sqlite3_column_blob(stmt, Int32(col))
+	}
+	
+	public func toDictionary() -> [String:Any?] {
+		var result = [String:Any?]()
+		forEachColumn { cur, i in
+			if let name = cur.getColumnName(i) {
+				let dataType = getDataType(i)
+				var value: Any? = nil
+				switch dataType {
+				case SQLITE_INTEGER:
+					value = cur.getInt64(i)
+				case SQLITE_FLOAT:
+					value = cur.getDouble(i)
+				case SQLITE_BLOB:
+					value = cur.getBlob(i)
+				default:
+					value = cur.getString(i)
+					break
+				}
+				
+				result[name] = value
+			}
+		}
+		return result
+	}
+	
+	public func toDictionaryAll(autoClose: Bool = false) -> [[String:Any?]] {
+		var result = [[String:Any?]]()
+		reset()
+		while next() {
+			result.append(toDictionary())
+		}
+		
+		if autoClose { close() }
+		return result
 	}
 }
 
