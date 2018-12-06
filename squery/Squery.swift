@@ -505,14 +505,14 @@ public class SQLiteCursor {
 		return result
 	}
 	
-	public func toDictionaryAll(autoClose: Bool = false) -> [[String:Any?]] {
+	public func toDictionaryAll(closeCursor: Bool = false) -> [[String:Any?]] {
 		var result = [[String:Any?]]()
 		reset()
 		while next() {
 			result.append(toDictionary())
 		}
 		
-		if autoClose { close() }
+		if closeCursor { close() }
 		return result
 	}
 }
