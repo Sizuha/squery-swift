@@ -725,7 +725,7 @@ public class TableCreator {
 		self.db = db
 	}
 	
-	public func addAutoInc(_ name: String) -> TableCreator {
+	public func addAutoInc(_ name: String) -> Self {
 		let colDef = ColumnDefine(name)
 		colDef.type = .integer
 		colDef.autoInc = true
@@ -736,7 +736,7 @@ public class TableCreator {
 		return self
 	}
 	
-	public func addPrimaryKey(_ name: String, type: SQLiteColumnType) -> TableCreator {
+	public func addPrimaryKey(_ name: String, type: SQLiteColumnType) -> Self {
 		let colDef = ColumnDefine(name)
 		colDef.type = type
 		colDef.pk = true
@@ -746,7 +746,7 @@ public class TableCreator {
 		return self
 	}
 	
-	public func addColumn(_ name: String, type: SQLiteColumnType, notNull: Bool = false, unique: Bool = false) -> TableCreator {
+	public func addColumn(_ name: String, type: SQLiteColumnType, notNull: Bool = false, unique: Bool = false) -> Self {
 		let colDef = ColumnDefine(name)
 		colDef.type = type
 		colDef.notNull = notNull
@@ -1006,7 +1006,7 @@ public class TableQuery {
 	/// ただし、`keys()`の設定は残る。
 	/// クエリを一度実行してから、また別の設定でクエリを実行すためには一度`reset()`する事をおすすめする。
 	/// - Returns: 自分のinstance
-	public func reset() -> TableQuery {
+	public func reset() -> Self {
 		sqlDistnict = false
 		
 		sqlJoin = ""
@@ -1038,20 +1038,20 @@ public class TableQuery {
 	///   1) true = 重複したrow(行)を除外する
 	///   2) false = 重複したrow(行)も残す
 	/// - Returns: 自分のinstance
-	public func distnict(_ flag: Bool = true) -> TableQuery {
+	public func distnict(_ flag: Bool = true) -> Self {
 		sqlDistnict = flag
 		return self
 	}
 	
-	public func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> TableQuery {
+	public func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> Self {
 		return join(type: joinType, tables: tables, on: joinOn, args: args)
 	}
 	/// 参照
 	/// ---
 	/// ```
-	/// func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> TableQuery
+	/// func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> Self
 	/// ```
-	public func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, args: [Any?]) -> TableQuery {
+	public func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, args: [Any?]) -> Self {
 		switch joinType {
 		case .cross:
 			sqlJoin = "CROSS JOIN"
@@ -1089,15 +1089,15 @@ public class TableQuery {
 	///   - whereText: WHERE句に入る条件
 	///   - args: 条件の中の「?」に対応するパラメータ達
 	/// - Returns: 自分のinstance
-	public func setWhere(_ whereText: String, _ args: Any?...) -> TableQuery {
+	public func setWhere(_ whereText: String, _ args: Any?...) -> Self {
 		return setWhere(whereText, args: args)
 	}
 	/// 参照
 	/// ---
 	/// ```
-	/// func setWhere(_ whereText: String, args: Any?...) -> TableQuery
+	/// func setWhere(_ whereText: String, args: Any?...) -> Self
 	/// ```
-	public func setWhere(_ whereText: String, args: [Any?]) -> TableQuery {
+	public func setWhere(_ whereText: String, args: [Any?]) -> Self {
 		sqlWhereArgs.removeAll()
 		
 		sqlWhere = "(\(whereText))"
@@ -1127,21 +1127,21 @@ public class TableQuery {
 	/// 参照
 	/// ---
 	/// ```
-	/// func setWhere(_ whereText: String, args: [Any?]) -> TableQuery
+	/// func setWhere(_ whereText: String, args: [Any?]) -> Self
 	/// ```
 	/// - Parameters:
 	///   - whereText: 追加する条件
 	///   - args: 条件の中の「?」に対応するパラメータ達
 	/// - Returns: 自分のinstance
-	public func whereAnd(_ whereText: String, _ args: Any?...) -> TableQuery {
+	public func whereAnd(_ whereText: String, _ args: Any?...) -> Self {
 		return whereAnd(whereText, args: args)
 	}
 	/// 参照
 	/// ---
 	/// ```
-	/// func whereAnd(_ whereText: String, args: Any?...) -> TableQuery
+	/// func whereAnd(_ whereText: String, args: Any?...) -> Self
 	/// ```
-	public func whereAnd(_ whereText: String, args: [Any?]) -> TableQuery {
+	public func whereAnd(_ whereText: String, args: [Any?]) -> Self {
 		if sqlWhere.isEmpty {
 			sqlWhere = "(\(whereText))"
 		}
@@ -1173,7 +1173,7 @@ public class TableQuery {
 	///     1) true = 昇順 (default)
 	///     2) false = 降順
 	/// - Returns: 自分のinstance
-	public func orderBy(_ field: String, asc: Bool = true) -> TableQuery {
+	public func orderBy(_ field: String, asc: Bool = true) -> Self {
 		if sqlOrderBy.count > 0 {
 			sqlOrderBy.append(",")
 		}
@@ -1197,7 +1197,7 @@ public class TableQuery {
 	/// ```
 	/// - Parameter orderByRaw: 自分のinstance
 	/// - Returns: 自分のinstance
-	public func setOrderBy(_ orderByRaw: String) -> TableQuery {
+	public func setOrderBy(_ orderByRaw: String) -> Self {
 		sqlOrderBy = orderByRaw
 		return self
 	}
@@ -1206,12 +1206,12 @@ public class TableQuery {
 	/// 参照
 	/// ---
 	/// ```
-	/// func groupBy(_ cols: [String], having: String, args: Any?...) -> TableQuery
+	/// func groupBy(_ cols: [String], having: String, args: Any?...) -> Self
 	/// ```
 	///
 	/// - Parameter cols: GROUP BYするcolumn達
 	/// - Returns: 自分のinstance
-	public func groupBy(_ cols: String...) -> TableQuery {
+	public func groupBy(_ cols: String...) -> Self {
 		sqlGroupByCols = cols
 		sqlHaving = ""
 		sqlHavingArgs.removeAll()
@@ -1226,16 +1226,16 @@ public class TableQuery {
 	///   - having: HAVING条件
 	///   - args: HAVING条件の「?」に対応するパラメーター
 	/// - Returns: 自分のinstance
-	public func groupBy(_ cols: [String], having: String, args: Any?...) -> TableQuery {
+	public func groupBy(_ cols: [String], having: String, args: Any?...) -> Self {
 		return groupBy(cols, having: having, args: args)
 	}
 	/// GROUP BY句を作成する
 	/// 参照
 	/// ---
 	/// ```
-	/// func groupBy(_ cols: [String], having: String, args: Any?...) -> TableQuery
+	/// func groupBy(_ cols: [String], having: String, args: Any?...) -> Self
 	/// ```
-	public func groupBy(_ cols: [String], having: String, args: [Any?]) -> TableQuery {
+	public func groupBy(_ cols: [String], having: String, args: [Any?]) -> Self {
 		sqlGroupByCols = cols
 		sqlHaving = having
 		sqlHavingArgs = args
@@ -1257,7 +1257,7 @@ public class TableQuery {
 	///   - count: 最大の行数
 	///   - offset: スタート位置(0 base)
 	/// - Returns: 自分のinstance
-	public func limit(_ count: Int, offset: Int = 0) -> TableQuery {
+	public func limit(_ count: Int, offset: Int = 0) -> Self {
 		sqlLimitCount = count
 		sqlLimitOffset = offset
 		return self
@@ -1266,9 +1266,9 @@ public class TableQuery {
 	/// 参照
 	/// ---
 	/// ```
-	/// func columns(columns: String...) -> TableQuery
+	/// func columns(columns: String...) -> Self
 	/// ```
-	public func columns(columns: [String]) -> TableQuery {
+	public func columns(columns: [String]) -> Self {
 		sqlColumns = columns
 		return self
 	}
@@ -1276,7 +1276,7 @@ public class TableQuery {
 	///
 	/// - Parameter columns: column名（複数指定可）、省略すると「すべてのcolumn」
 	/// - Returns: 自分のinstance
-	public func columns(_ columns: String...) -> TableQuery {
+	public func columns(_ columns: String...) -> Self {
 		sqlColumns = columns
 		return self
 	}
@@ -1286,16 +1286,16 @@ public class TableQuery {
 	/// `update()`時、キーのcolumnは修正内容から自動で外される
 	/// - Parameter cols: キーのcomunn達
 	/// - Returns: 自分のinstance
-	public func keys(_ cols: String...) -> TableQuery {
+	public func keys(_ cols: String...) -> Self {
 		sqlKeyColumns = cols
 		return self
 	}
 	/// 参照
 	/// ---
 	/// ```
-	/// func keys(columns cols: String...) -> TableQuery
+	/// func keys(columns cols: String...) -> Self
 	/// ```
-	public func keys(columns cols: [String]) -> TableQuery {
+	public func keys(columns cols: [String]) -> Self {
 		sqlKeyColumns = cols
 		return self
 	}
@@ -1445,10 +1445,10 @@ public class TableQuery {
 	}
 	
 	//--- INSERT ---
-	public func values(_ row: SQueryRow) -> TableQuery {
+	public func values(_ row: SQueryRow) -> Self {
 		return values(row.toValues())
 	}
-	public func values(_ data: Dictionary<String,Any?>) -> TableQuery {
+	public func values(_ data: Dictionary<String,Any?>) -> Self {
 		sqlValues = data
 		return self
 	}
