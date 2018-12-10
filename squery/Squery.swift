@@ -1467,7 +1467,7 @@ public class TableQuery {
 		return values(data).insert(except: cols)
 	}
 	
-	public func insert(except cols: [String] = []) -> Bool {
+	public func insert(except exceptCols: [String] = []) -> Bool {
 		var sql = "INSERT INTO \(tableName) "
 		
 		var cols = ""
@@ -1476,7 +1476,7 @@ public class TableQuery {
 		var first = true
 
 		for (colName, value) in sqlValues {
-			if cols.contains(colName) {
+			if exceptCols.contains(colName) {
 				continue
 			}
 			
@@ -1484,7 +1484,7 @@ public class TableQuery {
 				cols.append(",")
 				vals.append(",")
 			}
-			cols.append("`\(colName)`")
+			cols.append("\(colName)")
 			vals.append("?")
 			
 			args.append(value)
