@@ -130,10 +130,16 @@ public class SQLiteConnection {
 		case nil:
 			sqlite3_bind_null(stmt, idx)
 			
-		case is Int8, is Int16, is Int32:
+		case is Int8:
+			sqlite3_bind_int(stmt, idx, Int32(arg as! Int32))
+		case is Int16:
+			sqlite3_bind_int(stmt, idx, Int32(arg as! Int16))
+		case is Int32:
 			sqlite3_bind_int(stmt, idx, arg as! Int32)
 			
-		case is Int, is Int64:
+		case is Int:
+			sqlite3_bind_int64(stmt, idx, Int64(arg as! Int))
+		case is Int64:
 			sqlite3_bind_int64(stmt, idx, arg as! Int64)
 			
 		case is Bool:
