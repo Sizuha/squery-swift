@@ -116,45 +116,50 @@ public class SQLiteConnection {
 		
 		var idx: Int32 = 0
 		for arg in args {
-			idx += 1 // 1 based inex
+			idx += 1 // 1 based index
+			let result: Int32
 			
 			if arg == nil {
-				sqlite3_bind_null(stmt, idx)
-				continue
+				result = sqlite3_bind_null(stmt, idx)
+			}
+			else {
+				switch arg {
+				case is Bool:
+					let data = arg as! Bool
+					result = sqlite3_bind_int(stmt, idx, data ? 1 : 0)
+					
+				case is Int8:
+					result = sqlite3_bind_int(stmt, idx, Int32(arg as! Int32))
+				case is Int16:
+					result = sqlite3_bind_int(stmt, idx, Int32(arg as! Int16))
+				case is Int32:
+					result = sqlite3_bind_int(stmt, idx, arg as! Int32)
+					
+				case is Int:
+					result = sqlite3_bind_int64(stmt, idx, Int64(arg as! Int))
+				case is Int64:
+					result = sqlite3_bind_int64(stmt, idx, arg as! Int64)
+					
+				case is Date:
+					let data = arg as! Date
+					let timestamp = SQuery.toTimestamp(data)
+					result = sqlite3_bind_int64(stmt, idx, timestamp)
+					
+				case is String:
+					let data = arg as! String
+					let length = Int32(data.lengthOfBytes(using: String.Encoding.utf8))
+					result = sqlite3_bind_text(stmt, idx, data, length, SQLITE_TRANSIENT)
+					
+				case is [UInt8]:
+					let data = arg as! [UInt8]
+					result = sqlite3_bind_blob(stmt, idx, data, Int32(data.count), SQLITE_TRANSIENT)
+					
+				default: continue
+				}
 			}
 			
-			switch arg {
-			case is Bool:
-				let data = arg as! Bool
-				sqlite3_bind_int(stmt, idx, data ? 1 : 0)
-				
-			case is Int8:
-				sqlite3_bind_int(stmt, idx, Int32(arg as! Int32))
-			case is Int16:
-				sqlite3_bind_int(stmt, idx, Int32(arg as! Int16))
-			case is Int32:
-				sqlite3_bind_int(stmt, idx, arg as! Int32)
-				
-			case is Int:
-				sqlite3_bind_int64(stmt, idx, Int64(arg as! Int))
-			case is Int64:
-				sqlite3_bind_int64(stmt, idx, arg as! Int64)
-				
-			case is Date:
-				let data = arg as! Date
-				let timestamp = SQuery.toTimestamp(data)
-				sqlite3_bind_int64(stmt, idx, timestamp)
-				
-			case is String:
-				let data = arg as! String
-				let length = Int32(data.lengthOfBytes(using: String.Encoding.utf8))
-				sqlite3_bind_text(stmt, idx, data, length, SQLITE_TRANSIENT)
-				
-			case is [UInt8]:
-				let data = arg as! [UInt8]
-				sqlite3_bind_blob(stmt, idx, data, Int32(data.count), nil)
-				
-			default: continue
+			guard result == SQLITE_OK else {
+				fatalError("[SQuery] bind data error >> index: \(idx), data: \(arg.debugDescription)")
 			}
 		}
 	}
