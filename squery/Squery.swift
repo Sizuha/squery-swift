@@ -129,7 +129,7 @@ public class SQLiteConnection {
 					result = sqlite3_bind_int(stmt, idx, data ? 1 : 0)
 					
 				case is Int8:
-					result = sqlite3_bind_int(stmt, idx, Int32(arg as! Int32))
+					result = sqlite3_bind_int(stmt, idx, Int32(arg as! Int8))
 				case is Int16:
 					result = sqlite3_bind_int(stmt, idx, Int32(arg as! Int16))
 				case is Int32:
