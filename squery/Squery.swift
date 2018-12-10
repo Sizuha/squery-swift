@@ -41,6 +41,8 @@ public enum SQLiteColumnType: String {
 	case none = "NONE"
 }
 
+private let SQLITE_TRANSIENT = unsafeBitCast(OpaquePointer(bitPattern: -1), to: sqlite3_destructor_type.self)
+
 private var enableDebugMode = true
 public func setEnableSQueryDebug(_ flag: Bool = true) {
 	enableDebugMode = flag
@@ -105,14 +107,7 @@ public class SQLiteConnection {
 	}
 
 	private func bindAll(_ stmt: OpaquePointer?, _ args: Any?...) {
-		guard let stmt = stmt else {
-			return
-		}
-		
-		var idx: Int32 = 0
-		for arg in args {
-			idx = bindSingle(stmt, idx, arg)
-		}
+		bindAll(stmt, args: args)
 	}
 	private func bindAll(_ stmt: OpaquePointer?, args: [Any?]) {
 		guard let stmt = stmt else {
@@ -121,50 +116,47 @@ public class SQLiteConnection {
 		
 		var idx: Int32 = 0
 		for arg in args {
-			idx = bindSingle(stmt, idx, arg)
+			idx += 1 // 1 based inex
+			
+			if arg == nil {
+				sqlite3_bind_null(stmt, idx)
+				continue
+			}
+			
+			switch arg {
+			case is Bool:
+				let data = arg as! Bool
+				sqlite3_bind_int(stmt, idx, data ? 1 : 0)
+				
+			case is Int8:
+				sqlite3_bind_int(stmt, idx, Int32(arg as! Int32))
+			case is Int16:
+				sqlite3_bind_int(stmt, idx, Int32(arg as! Int16))
+			case is Int32:
+				sqlite3_bind_int(stmt, idx, arg as! Int32)
+				
+			case is Int:
+				sqlite3_bind_int64(stmt, idx, Int64(arg as! Int))
+			case is Int64:
+				sqlite3_bind_int64(stmt, idx, arg as! Int64)
+				
+			case is Date:
+				let data = arg as! Date
+				let timestamp = SQuery.toTimestamp(data)
+				sqlite3_bind_int64(stmt, idx, timestamp)
+				
+			case is String:
+				let data = arg as! String
+				let length = Int32(data.lengthOfBytes(using: String.Encoding.utf8))
+				sqlite3_bind_text(stmt, idx, data, length, SQLITE_TRANSIENT)
+				
+			case is [UInt8]:
+				let data = arg as! [UInt8]
+				sqlite3_bind_blob(stmt, idx, data, Int32(data.count), nil)
+				
+			default: continue
+			}
 		}
-	}
-
-	private func bindSingle(_ stmt: OpaquePointer?, _ idx: Int32, _ arg: Any?) -> Int32 {
-		switch arg {
-		case nil:
-			sqlite3_bind_null(stmt, idx)
-			
-		case is Int8:
-			sqlite3_bind_int(stmt, idx, Int32(arg as! Int32))
-		case is Int16:
-			sqlite3_bind_int(stmt, idx, Int32(arg as! Int16))
-		case is Int32:
-			sqlite3_bind_int(stmt, idx, arg as! Int32)
-			
-		case is Int:
-			sqlite3_bind_int64(stmt, idx, Int64(arg as! Int))
-		case is Int64:
-			sqlite3_bind_int64(stmt, idx, arg as! Int64)
-			
-		case is Bool:
-			let data = arg as! Bool
-			sqlite3_bind_int(stmt, idx, data ? 1 : 0)
-			
-		case is [UInt8]:
-			let data = arg as! [UInt8]
-			sqlite3_bind_blob(stmt, idx, data, Int32(data.count), nil)
-			
-		case is Date:
-			let data = arg as! Date
-			let timestamp = SQuery.toTimestamp(data)
-			sqlite3_bind_int64(stmt, idx, timestamp)
-			
-		case is String:
-			let data = arg as! String
-			let length = Int32(data.lengthOfBytes(using: String.Encoding.utf8))
-			sqlite3_bind_text(stmt, idx, data, length, nil)
-			
-		default:
-			break
-		}
-		
-		return idx+1
 	}
 	
 	public func query(sql: String, _ args: Any?...) -> SQLiteCursor {
@@ -218,7 +210,7 @@ public class SQLiteConnection {
 	}
 	
 	public func execute(sql: String, _ args: Any?...) -> Bool {
-		let stmt = prepare(sql: sql, args)
+		let stmt = prepare(sql: sql, args: args)
 		return excute(stmt!)
 	}
 	public func execute(sql: String, args: [Any?]) -> Bool {
@@ -1454,7 +1446,7 @@ public class TableQuery {
 	public func values(_ row: SQueryRow) -> Self {
 		return values(row.toValues())
 	}
-	public func values(_ data: Dictionary<String,Any?>) -> Self {
+	public func values(_ data: [String:Any?]) -> Self {
 		sqlValues = data
 		return self
 	}
@@ -1463,7 +1455,7 @@ public class TableQuery {
 		return values(row).insert(except: cols)
 	}
 	
-	public func insert(values data: Dictionary<String,Any?>, except cols: [String] = []) -> Bool {
+	public func insert(values data: [String:Any?], except cols: [String] = []) -> Bool {
 		return values(data).insert(except: cols)
 	}
 	
@@ -1501,7 +1493,7 @@ public class TableQuery {
 	public func update(set values: SQueryRow, autoMakeWhere: Bool = true) -> Int {
 		return update(set: values.toValues(), autoMakeWhere: autoMakeWhere)
 	}
-	public func update(set values: Dictionary<String,Any?>, autoMakeWhere: Bool = true) -> Int {
+	public func update(set values: [String:Any?], autoMakeWhere: Bool = true) -> Int {
 		var sql = "UPDATE \(tableName) SET "
 		var args = [Any?]()
 		var first = true
