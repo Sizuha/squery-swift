@@ -140,6 +140,11 @@ public class SQLiteConnection {
 				case is Int64:
 					result = sqlite3_bind_int64(stmt, idx, arg as! Int64)
 					
+				case is Float:
+					result = sqlite3_bind_double(stmt, idx, Double(arg as! Float))
+				case is Double:
+					result = sqlite3_bind_double(stmt, idx, arg as! Double)
+					
 				case is Date:
 					let data = arg as! Date
 					let timestamp = SQuery.toTimestamp(data)
@@ -1522,6 +1527,14 @@ public class TableQuery {
 		if !sqlWhere.isEmpty {
 			sql.append(" WHERE \(sqlWhere)")
 			args.append(contentsOf: sqlWhereArgs)
+		}
+		
+		if enableDebugMode {
+			var log = ""
+			for a in args {
+				log.append("\(String(describing: a)),")
+			}
+			printLog("params: \(log)")
 		}
 		
 		sql.append(";")
