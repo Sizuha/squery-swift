@@ -665,25 +665,26 @@ public class SQuery {
 	
 	//--- Utils ---
 	
-	public static let utcTimeZone: TimeZone = TimeZone(abbreviation: "UTC")!
+	public static let utcTimeZone = TimeZone(abbreviation: "UTC")!
+	public static let standardLocal = Locale(identifier: "en_US_POSIX")
 	
 	public static var newDateTimeFormat: DateFormatter {
 		let fmt = DateFormatter()
-		fmt.locale = Locale.current
+		fmt.locale = standardLocal
 		fmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
 		fmt.timeZone = utcTimeZone
 		return fmt
 	}
 	public static var newDateFormat: DateFormatter {
 		let fmt = DateFormatter()
-		fmt.locale = Locale.current
+		fmt.locale = standardLocal
 		fmt.dateFormat = "yyyy-MM-dd"
 		fmt.timeZone = utcTimeZone
 		return fmt
 	}
 	public static var newTimeFormat: DateFormatter {
 		let fmt = DateFormatter()
-		fmt.locale = Locale.current
+		fmt.locale = standardLocal
 		fmt.dateFormat = "HH:mm:ss"
 		fmt.timeZone = utcTimeZone
 		return fmt
