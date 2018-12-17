@@ -665,38 +665,28 @@ public class SQuery {
 	
 	//--- Utils ---
 	
-	public static var utcTimeZone: TimeZone {
-		get {
-			return TimeZone(abbreviation: "UTC")!
-		}
-	}
+	public static let utcTimeZone: TimeZone = TimeZone(abbreviation: "UTC")!
 	
-	public static var dateTimeFormat: DateFormatter {
-		get {
-			let fmt = DateFormatter()
-			fmt.locale = Locale.current
-			fmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
-			fmt.timeZone = utcTimeZone
-			return fmt
-		}
+	public static var newDateTimeFormat: DateFormatter {
+		let fmt = DateFormatter()
+		fmt.locale = Locale.current
+		fmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
+		fmt.timeZone = utcTimeZone
+		return fmt
 	}
-	public static var dateFormat: DateFormatter {
-		get {
-			let fmt = DateFormatter()
-			fmt.locale = Locale.current
-			fmt.dateFormat = "yyyy-MM-dd"
-			fmt.timeZone = utcTimeZone
-			return fmt
-		}
+	public static var newDateFormat: DateFormatter {
+		let fmt = DateFormatter()
+		fmt.locale = Locale.current
+		fmt.dateFormat = "yyyy-MM-dd"
+		fmt.timeZone = utcTimeZone
+		return fmt
 	}
-	public static var timeFormat: DateFormatter {
-		get {
-			let fmt = DateFormatter()
-			fmt.locale = Locale.current
-			fmt.dateFormat = "HH:mm:ss"
-			fmt.timeZone = utcTimeZone
-			return fmt
-		}
+	public static var newTimeFormat: DateFormatter {
+		let fmt = DateFormatter()
+		fmt.locale = Locale.current
+		fmt.dateFormat = "HH:mm:ss"
+		fmt.timeZone = utcTimeZone
+		return fmt
 	}
 
 	public static func toTimestamp(_ datetime: Date) -> Int64 {
