@@ -313,7 +313,7 @@ if let tblAcc = SQuery("user.db").from("account") {
 
     let joindateRaw = cursor.getString(3)
     let joinDate: Date? = joindateRaw != nil
-      ? SQuery.dateTimeFormat.date(from: joindateRaw)
+      ? SQuery.newDateTimeFormat.date(from: joindateRaw)
       : nil
     // ...
   }
@@ -846,7 +846,7 @@ class Account: SQueryRow {
         age = cursor.getInt(index)
       case "join_date":
         joinDate: Date? = joindateRaw != nil
-          ? SQuery.dateTimeFormat.date(from: joindateRaw)
+          ? SQuery.newDateTimeFormat.date(from: joindateRaw)
           : nil
       }
     }
@@ -855,7 +855,7 @@ class Account: SQueryRow {
   func toValues() -> Dictionary<String,Any> {
 	return [
       "id": id, "pwd": pass, "name": name, "age": age,
-      "join_date": SQuery.dateTimeFormat.string(joinDate)
+      "join_date": SQuery.newDateTimeFormat.string(joinDate)
     ]
   }
 }
