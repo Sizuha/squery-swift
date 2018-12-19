@@ -569,15 +569,15 @@ public class SQuery {
 	///     - .readonly = 修正不可
 	///     - .memory = メモリーDB
 	public required init(_ dbfile: String, mode: SQLiteOpenMode = .readWriteCreate) {
-		if !dbfile.starts(with: "file:") {
+		if !dbfile.hasPrefix("file:") {
 			dataSource = "file:"
 			
 			var filePath: String
-			if dbfile.starts(with: "/") {
+			if dbfile.hasPrefix("/") {
 				filePath = dbfile
 			}
 			else {
-				let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+				let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
 				filePath = "\(path)/\(dbfile)"
 			}
 			
