@@ -25,22 +25,33 @@ Pathを省略すると、基本的にアプリの**Document**から操作を行�
 
 ## Create Table
 ```swift
-if let tbl = SQuery(at: "some.db").talbeCreator(name: "TableName") {
-  defer { tbl.close() } // 自動でDBをclose
-  tbl
-    .addAutoInc("idx") // PK and AUTO INCREMENT
-    .addColumn("title", type: .text, notNull: true)
-    .addColumn("date", type: .integer)
-    .addColumn("media", type: .integer)
-    .addColumn("progress", type: .float)
-    .addColumn("total", type: .integer)
-    .addColumn("fin", type: .integer)
-    .addColumn("rating", type: .float)
-    .addColumn("memo", type: .text)
-    .addColumn("link", type: .text)
-    .create(ifNotExists: true)
+if let table = SQuery(at: "some.db").talbeCreator(name: "TableName") {
+	defer { table.close() } // 自動でDBをclose
+	table
+		.addAutoInc("idx") // PK and AUTO INCREMENT
+		.addColumn("title", type: .text, notNull: true)
+		.addColumn("date", type: .integer)
+		.addColumn("media", type: .integer)
+		.addColumn("progress", type: .float)
+		.addColumn("total", type: .integer)
+		.addColumn("fin", type: .integer)
+		.addColumn("rating", type: .float)
+		.addColumn("memo", type: .text)
+		.addColumn("link", type: .text)
+		.create(ifNotExists: true)
 }
 ```
 他に、`addPrimaryKey()`でPrimary Key(主キー)を指定できる
 
 ## Select
+```swift
+// SELECT * FROM anime WHERE fin=0 ORDER BY date DESC, title ASC;
+if let table = SQuery(at: "some.db").from("anime") {
+	defer { table.close() } // 自動でDBをclose
+	let cursor: SQLiteCursor = table
+		.setWhere("fin=?", false)
+		.orderBy("date", asc: false)
+		.orderBy("title", asc: true)
+		.select() // 結果を「Cursor」で返す
+}
+```
