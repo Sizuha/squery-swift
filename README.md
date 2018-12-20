@@ -47,11 +47,13 @@ if let table = SQuery(at: "some.db").talbeCreator(name: "TableName") {
 ```swift
 // SELECT * FROM anime WHERE fin=0 ORDER BY date DESC, title ASC;
 if let table = SQuery(at: "some.db").from("anime") {
-	defer { table.close() } // 自動でDBをclose
+	defer { table.close() } // 自動でDBをclose	
 	let cursor: SQLiteCursor = table
 		.setWhere("fin=?", false)
-		.orderBy("date", asc: false)
-		.orderBy("title", asc: true)
+		.orderBy("date", desc: true)
+		.orderBy("title")
 		.select() // 結果を「Cursor」で返す
+	defer { cursor.close() }
+	// ...
 }
 ```
