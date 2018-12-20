@@ -284,7 +284,7 @@ SQLiteのクエリの結果(row達)を探索する
 
 rowを探索する
 ```
-if let conn = SQuery("sample.db").open() {
+if let conn = SQuery(at:"sample.db").open() {
 let cursor = conn.query("SELECT * FROM user")
   defer {
     // Cursorの仕様が終わったら必ずcloseする!
@@ -299,7 +299,7 @@ let cursor = conn.query("SELECT * FROM user")
 
 rowからデータを習得
 ```
-if let tblAcc = SQuery("user.db").from("account") {
+if let tblAcc = SQuery(at:"user.db").from("account") {
   defer { tblAcc.close() }
   if let cursor = tblAcc
     .whereAnd("joinDate >= ", 2018)
@@ -532,13 +532,13 @@ SQLite DBをべ便利に扱う為のライブラリ
 ---
 Open & Close
 ```
-let dbConn = SQuery("db_file_path").open()
+let dbConn = SQuery(at:"db_file_path").open()
 dbConn?.close()
 ```
 
 Tableを指定してクエリを作成する
 ```
-let db = SQuery("db_file_path")
+let db = SQuery(at:"db_file_path")
 // from() メソッドは自動でDBをopenする
 let cursor = db.from("Table名")?.select()
 
@@ -556,6 +556,16 @@ class TableQuery
 public class SQuery {
 	private var dataSource: String
 	private var dbConn: SQLiteConnection? = nil
+	
+	public convenience init?(url: URL, mode: SQLiteOpenMode = .readWriteCreate) {
+		do {
+			let filepath = try String(contentsOf: url)
+			self.init(at: filepath, mode: mode)
+		}
+		catch {
+			return nil
+		}
+	}
 
 	/// SQLite DBファイルをOpen又は作成する
 	///
@@ -568,7 +578,7 @@ public class SQuery {
 	///	    - .readWrite = 読み書きができる
 	///     - .readonly = 修正不可
 	///     - .memory = メモリーDB
-	public required init(_ dbfile: String, mode: SQLiteOpenMode = .readWriteCreate) {
+	public required init(at dbfile: String, mode: SQLiteOpenMode = .readWriteCreate) {
 		if !dbfile.hasPrefix("file:") {
 			dataSource = "file:"
 			
@@ -865,7 +875,7 @@ SELECT
 ---
 ```
 // SELECT id, name, age FROM account WHERE age < 18 ORDER BY age DESC
-if let tableAcc = SQuery("user.db").from("account") {
+if let tableAcc = SQuery(at:"user.db").from("account") {
   defer { tableAcc.close()  }
   let rows = tableAcc
     .columns("id","name","age") //省略すると「all columns」
@@ -975,14 +985,14 @@ public class TableQuery {
 	/// Examples
 	/// ---
 	/// ```
-	/// if let dbConn = SQuery("some.db").open() {
+	/// if let dbConn = SQuery(at:"some.db").open() {
 	/// 	let table = TableQuery(dbConn, "tableName")
 	///		// ...
 	/// }
 	/// ```
 	/// SQueryクラスの`from()`メソッドをおすすめ
 	/// ```
-	/// let table = SQuery("some.db").from("tableName")
+	/// let table = SQuery(at:"some.db").from("tableName")
 	/// ```
 	///
 	/// - Parameters:
@@ -1073,12 +1083,12 @@ public class TableQuery {
 	/// SQLiteの「?」パラメーターに対応。
 	/// ```
 	/// // SELECT count(*) FROM account WHERE id=\(id) AND pass=\(pwd)
-	/// let cursor = SQuery("user.db").from("account")?
+	/// let cursor = SQuery(at:"user.db").from("account")?
 	///   .setWhere("id=? AND pass=?", id, pwd)
 	///   .select()
 	///
 	/// // UPDATE account SET pass=\(newPwd) WHERE id=\(id)
-	/// if let table = SQuery("user.db").from("account") {
+	/// if let table = SQuery(at:"user.db").from("account") {
 	///   table.setWhere("id=?", id).update(set: ["pass":newPwd])
 	///   table.close()
 	/// }
@@ -1110,14 +1120,14 @@ public class TableQuery {
 	/// `setWhere()`と同じだが、現在のWHERE句にAND条件で追加する
 	/// ```
 	/// // SELECT count(*) FROM account WHERE (id=\(id)) AND (pass=\(pwd))
-	/// let loginOk = SQuery("user.db").from("account")?
+	/// let loginOk = SQuery(at:"user.db").from("account")?
 	///   .setWhere("id=?", id)
 	///   .whereAnd("pass=?", pwd)
 	///   .count() == 1
 	/// ```
 	/// `setWhere()`を使わずに`whereAnd()`だけでWHERE句を作成することもできる
 	/// ```
-	/// let loginOk = SQuery("user.db").from("account")?
+	/// let loginOk = SQuery(at:"user.db").from("account")?
 	///   .whereAnd("id=?", id)
 	///   .whereAnd("pass=?", pwd)
 	///   .count() == 1
@@ -1160,7 +1170,7 @@ public class TableQuery {
 	/// 結果をソートする
 	/// ```
 	/// // SELECT * from account ORDER BY joinDate DESC, name ASC
-	/// let cursor = SQuery("user.db").from("account")?
+	/// let cursor = SQuery(at:"user.db").from("account")?
 	///   .orderBy("joinDate", asc: false)
 	///   .orderBy("name")
 	///   .select()
@@ -1189,7 +1199,7 @@ public class TableQuery {
 	/// 結果をソートする
 	/// ```
 	/// // SELECT * from account ORDER BY joinDate DESC, name ASC
-	/// let cursor = SQuery("user.db").from("account")?
+	/// let cursor = SQuery(at:"user.db").from("account")?
 	///   .setOrderBy("joinDate DESC, name ASC")
 	///   .select()
 	///
@@ -1247,7 +1257,7 @@ public class TableQuery {
 	/// ```
 	/// // SELECT * FROM scroe ORDER BY point DESC LIMIT \(pageOffset),10
 	/// let pageOffset = (pageNo-1)*10
-	/// let cursor = SQuery("user.db").from("score")?
+	/// let cursor = SQuery(at:"user.db").from("score")?
 	///   .orderBy("point", asc: false)
 	///   .limit(10, offset: pageOffset)
 	///   .select()
