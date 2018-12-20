@@ -45,15 +45,88 @@ if let table = SQuery(at: "some.db").talbeCreator(name: "TableName") {
 
 ## Select
 ```swift
-// SELECT * FROM anime WHERE fin=0 ORDER BY date DESC, title ASC;
-if let table = SQuery(at: "some.db").from("anime") {
+// SELECT * FROM account WHERE joinDate >= 2018 ORDER BY joinDate, age DESC;
+if let table = SQuery(at: "user.db").from("account") {
 	defer { table.close() } // 自動でDBをclose	
 	let cursor: SQLiteCursor = table
-		.setWhere("fin=?", false)
-		.orderBy("date", desc: true)
-		.orderBy("title")
+		.setWhere("joinDate >= ?", 2018)
+		.orderBy("joinDate")
+		.orderBy("age", desc: true)
 		.select() // 結果を「Cursor」で返す
 	defer { cursor.close() }
+	// ...
+}
+```
+
+### SQLiteCursor
+#### Cursorオブジェクトからデータを習得する方法
+```swift
+if let tblAcc = SQuery(at:"user.db").from("account") {
+	defer { tblAcc.close() }
+	if let cursor = tblAcc
+		.setWhere("joinDate >= ", 2018)
+		.orderBy("joinDate")
+		.orderBy("age", desc: true)
+		.columns("id","name","age","joinDate")
+		.select()
+	{
+		defer { cursor.close() }
+		while cursor.next() {
+			let id = cursor.getString(0)
+			let name = cursor.getString(1)
+			let age = cursor.getInt(2)
+
+			let joindateRaw = cursor.getString(3)
+			let joinDate: Date? = joindateRaw != nil
+			? SQuery.newDateTimeFormat.date(from: joindateRaw)
+			: nil
+			// ...		
+		}		
+	}
+}
+```
+
+#### CursorからData Objectを作成
+先ずは、Data classに**SQueryRow** protocolを具現する.
+```swift
+class Account: SQueryRow {
+	var id = ""
+	var name = ""
+	var age = 0
+	var joinDate: Date? = nil
+
+	func loadFrom(cursor: SQLiteCursor) {
+		cursor.forEachColumn { cur, i in
+			let name = cur.getColumnName(i)
+			switch name {
+			case "id": self.id = cursor.getString(i) ?? ""
+			case "name": self.id = cursor.getString(i) ?? ""
+			case "age": self.id = cursor.getint(i) ?? 0
+			case "joinDate": 
+				let joindateRaw = cursor.getString(i)
+				self.joinDate = joindateRaw != nil
+					? SQuery.newDateTimeFormat.date(from: joindateRaw)
+					: nil
+			default: break
+			}
+		}
+	}
+
+	func toValues() -> [String:Any?] {
+	// ...
+	}
+}
+```
+
+Seelctの結果をDataオブジェクトの配列で貰える
+```swift
+if let table = SQuery(at: "user.db").from("account") {
+	defer { table.close() }
+	let rows: [Account] = table
+		.setWhere("joinDate >= ?", 2018)
+		.orderBy("joinDate")
+		.orderBy("age", desc: true)
+		.select { Account() } // ここで空のDataオブジェクトを生成する
 	// ...
 }
 ```
