@@ -1185,7 +1185,7 @@ public class TableQuery {
 	///     1) true = 降順
 	///     2) false = 昇順 (default)
 	/// - Returns: 自分のinstance
-	public func orderBy(_ field: String, desc: Bool = true) -> Self {
+	public func orderBy(_ field: String, desc: Bool = false) -> Self {
 		if sqlOrderBy.count > 0 {
 			sqlOrderBy.append(",")
 		}
