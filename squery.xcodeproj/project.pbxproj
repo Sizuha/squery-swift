@@ -9,8 +9,8 @@
 /* Begin PBXBuildFile section */
 		D56BEE1D21CB50450070AB45 /* squery.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D56BEE1321CB50450070AB45 /* squery.framework */; };
 		D56BEE2221CB50450070AB45 /* squeryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56BEE2121CB50450070AB45 /* squeryTests.swift */; };
-		D56BEE2421CB50450070AB45 /* squery.h in Headers */ = {isa = PBXBuildFile; fileRef = D56BEE1621CB50450070AB45 /* squery.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D56BEE2E21CB50730070AB45 /* squery.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56BEE2D21CB50730070AB45 /* squery.swift */; };
+		D56BEE2421CB50450070AB45 /* SQuery.h in Headers */ = {isa = PBXBuildFile; fileRef = D56BEE1621CB50450070AB45 /* SQuery.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D56BEE2E21CB50730070AB45 /* SQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56BEE2D21CB50730070AB45 /* SQuery.swift */; };
 		D56BEE3121CB50970070AB45 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D56BEE3021CB50970070AB45 /* libsqlite3.tbd */; };
 /* End PBXBuildFile section */
 
@@ -26,12 +26,12 @@
 
 /* Begin PBXFileReference section */
 		D56BEE1321CB50450070AB45 /* squery.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = squery.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D56BEE1621CB50450070AB45 /* squery.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = squery.h; sourceTree = "<group>"; };
+		D56BEE1621CB50450070AB45 /* SQuery.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SQuery.h; sourceTree = "<group>"; };
 		D56BEE1721CB50450070AB45 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D56BEE1C21CB50450070AB45 /* squeryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = squeryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D56BEE2121CB50450070AB45 /* squeryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = squeryTests.swift; sourceTree = "<group>"; };
 		D56BEE2321CB50450070AB45 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D56BEE2D21CB50730070AB45 /* squery.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = squery.swift; sourceTree = "<group>"; };
+		D56BEE2D21CB50730070AB45 /* SQuery.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SQuery.swift; sourceTree = "<group>"; };
 		D56BEE3021CB50970070AB45 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -77,9 +77,9 @@
 		D56BEE1521CB50450070AB45 /* squery */ = {
 			isa = PBXGroup;
 			children = (
-				D56BEE1621CB50450070AB45 /* squery.h */,
 				D56BEE1721CB50450070AB45 /* Info.plist */,
-				D56BEE2D21CB50730070AB45 /* squery.swift */,
+				D56BEE1621CB50450070AB45 /* SQuery.h */,
+				D56BEE2D21CB50730070AB45 /* SQuery.swift */,
 			);
 			path = squery;
 			sourceTree = "<group>";
@@ -108,7 +108,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D56BEE2421CB50450070AB45 /* squery.h in Headers */,
+				D56BEE2421CB50450070AB45 /* SQuery.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -210,7 +210,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D56BEE2E21CB50730070AB45 /* squery.swift in Sources */,
+				D56BEE2E21CB50730070AB45 /* SQuery.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

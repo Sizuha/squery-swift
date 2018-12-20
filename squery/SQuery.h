@@ -1,6 +1,6 @@
 //
-//  squery.h
-//  squery
+//  SQuery.h
+//  SQuery
 //
 //  Created by IL KYOUNG HWANG on 2018/12/20.
 //  Copyright © 2018 Sizuha. All rights reserved.
