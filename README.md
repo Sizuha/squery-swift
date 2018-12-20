@@ -58,6 +58,23 @@ if let table = SQuery(at: "user.db").from("account") {
 }
 ```
 
+他にも `gorupBy()`,`limit()`,`distnict()`などが使える。
+
+### whereAnd
+where句の場合、ANDで条件を繋ぐ事がよくある。その時に`whereAnd()`を使えば便利。
+```swift
+// SELECT * FROM account WHERE (joinDate >= 2018) AND (age >= 18);
+if let table = SQuery(at: "user.db").from("account") {
+	defer { table.close() } // 自動でDBをclose	
+	let cursor: SQLiteCursor = table
+		.whereAnd("joinDate >= ?", 2018)
+		.whereAnd("age >= ?", 18)
+		.select()
+	defer { cursor.close() }
+	// ...
+}
+```
+
 ### SQLiteCursor
 #### Cursorオブジェクトからデータを習得する方法
 ```swift
