@@ -304,18 +304,21 @@ if let tblAcc = SQuery(at:"user.db").from("account") {
   if let cursor = tblAcc
     .whereAnd("joinDate >= ", 2018)
     .orderBy("joinDate")
-    .select("id,name,age,joinDate")
+    .columns("id","name","age","joinDate")
+    .select()
   {
     defer { cursor.close() }
-    let id = cursor.getString(0)
-    let name = cursor.getString(1)
-    let age = cursor.getInt(2)
+    while curosr.next() {
+        let id = cursor.getString(0)
+        let name = cursor.getString(1)
+        let age = cursor.getInt(2)
 
-    let joindateRaw = cursor.getString(3)
-    let joinDate: Date? = joindateRaw != nil
-      ? SQuery.newDateTimeFormat.date(from: joindateRaw)
-      : nil
-    // ...
+        let joindateRaw = cursor.getString(3)
+        let joinDate: Date? = joindateRaw != nil
+        ? SQuery.newDateTimeFormat.date(from: joindateRaw)
+        : nil
+        // ...
+    }
   }
 }
 ```
@@ -880,7 +883,7 @@ if let tableAcc = SQuery(at:"user.db").from("account") {
   let rows = tableAcc
     .columns("id","name","age") //省略すると「all columns」
     .setWhere("age < ?", 18)
-    .orderBy(age, asc: false)
+    .orderBy(age, desc: true)
     .select { Account() }
 
   for row in rows { ... }
@@ -892,7 +895,7 @@ SELECT One
 ```
 // SELECT * account ORDER BY age DESC LIMIT 1
 let oldest: Account = tableAcc
-  .orderBy(age, asc: false)
+  .orderBy(age, desc: true)
   .selectOne { Account() }
 ```
 
@@ -1171,24 +1174,24 @@ public class TableQuery {
 	/// ```
 	/// // SELECT * from account ORDER BY joinDate DESC, name ASC
 	/// let cursor = SQuery(at:"user.db").from("account")?
-	///   .orderBy("joinDate", asc: false)
+	///   .orderBy("joinDate", desc: true)
 	///   .orderBy("name")
 	///   .select()
 	///
 	/// ```
 	/// - Parameters:
 	///   - field: ソートするcolumn名
-	///   - asc:
-	///     1) true = 昇順 (default)
-	///     2) false = 降順
+	///   - desc:
+	///     1) true = 降順
+	///     2) false = 昇順 (default)
 	/// - Returns: 自分のinstance
-	public func orderBy(_ field: String, asc: Bool = true) -> Self {
+	public func orderBy(_ field: String, desc: Bool = true) -> Self {
 		if sqlOrderBy.count > 0 {
 			sqlOrderBy.append(",")
 		}
 		
 		sqlOrderBy.append("\(field)")
-		if (!asc) {
+		if (desc) {
 			sqlOrderBy.append(" DESC")
 		}
 		return self
@@ -1258,7 +1261,7 @@ public class TableQuery {
 	/// // SELECT * FROM scroe ORDER BY point DESC LIMIT \(pageOffset),10
 	/// let pageOffset = (pageNo-1)*10
 	/// let cursor = SQuery(at:"user.db").from("score")?
-	///   .orderBy("point", asc: false)
+	///   .orderBy("point", desc: true)
 	///   .limit(10, offset: pageOffset)
 	///   .select()
 	/// ```
