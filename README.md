@@ -86,6 +86,12 @@ if let tblAcc = SQuery(at:"user.db").from("account") {
 }
 ```
 
+Cursorが持っているデータをDictionaryで貰うこともできる
+```swift
+let result: [[String:Any?]] = cursor.toDictionaryAll(closeCursor: true)
+```
+
+
 #### CursorからData Objectを作成
 先ずは、Data classに**SQueryRow** protocolを具現する.
 ```swift
