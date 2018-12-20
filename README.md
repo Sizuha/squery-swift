@@ -130,3 +130,18 @@ if let table = SQuery(at: "user.db").from("account") {
 	// ...
 }
 ```
+
+配列を作成たくない場合、(for each)
+```swift
+if let table = SQuery(at: "user.db").from("account") {
+	defer { table.close() }
+	table
+		.setWhere("joinDate >= ?", 2018)
+		.orderBy("joinDate")
+		.orderBy("age", desc: true)
+		.select(factory:{ Account() }) { row: Account in
+		// ...
+		}
+	// ...
+}
+```
