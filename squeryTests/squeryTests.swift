@@ -2,33 +2,17 @@
 //  squeryTests.swift
 //  squeryTests
 //
-//  Created by IL KYOUNG HWANG on 2018/11/08.
-//  Copyright © 2018年 Sizuha's Atelier. All rights reserved.
+//  Created by IL KYOUNG HWANG on 2018/12/20.
+//  Copyright © 2018 Sizuha. All rights reserved.
 //
 
 import XCTest
 @testable import squery
 
 class squeryTests: XCTestCase {
-	
-	private var db: SQuery? = nil
-	
-	class User: SQueryRow {
-		var name = ""
-		var age = 0
-		
-		func loadFrom(cursor: SQLiteCursor) {
-			name = cursor.getString(0) ?? ""
-			age = cursor.getInt(1) ?? 0
-		}
-		
-		func toValues() -> Dictionary<String, Any?> {
-			return Dictionary<String, Any?>()
-		}
-	}
 
     override func setUp() {
-        db = SQuery("sample.db")
+        // Put setup code here. This method is called before the invocation of each test method in the class.
     }
 
     override func tearDown() {
@@ -36,10 +20,8 @@ class squeryTests: XCTestCase {
     }
 
     func testExample() {
-        let rows = db?.from(table: "user")?
-			.select(factory: { User() }, "name", "age")
-		
-		
+        // This is an example of a functional test case.
+        // Use XCTAssert and related functions to verify your tests produce the correct results.
     }
 
     func testPerformanceExample() {
