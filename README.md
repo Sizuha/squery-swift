@@ -154,7 +154,7 @@ if let table = SQuery(at: "user.db").from("account") {
 }
 ```
 
-配列を作成たくない場合、(for each)
+配列を作成したくない場合、(for each)
 ```swift
 if let table = SQuery(at: "user.db").from("account") {
 	defer { table.close() }
