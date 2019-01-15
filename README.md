@@ -123,8 +123,8 @@ class Account: SQueryRow {
 			let name = cur.getColumnName(i)
 			switch name {
 			case "id": self.id = cursor.getString(i) ?? ""
-			case "name": self.id = cursor.getString(i) ?? ""
-			case "age": self.id = cursor.getint(i) ?? 0
+			case "name": self.name = cursor.getString(i) ?? ""
+			case "age": self.age = cursor.getint(i) ?? 0
 			case "joinDate": 
 				let joindateRaw = cursor.getString(i)
 				self.joinDate = joindateRaw != nil
