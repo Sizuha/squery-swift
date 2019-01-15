@@ -21,7 +21,7 @@ let dbConn = SQuery(url: dbUrl).open()
 defer { dbConn?.close() }
 ```
 
-Pathを省略すると、基本的にアプリの**Document**から操作を行う。ファイルが存在しない場合は、ファイルを作成する。 これは基本動作で、`SQuery("db_file_path", mode: .readWrite)`のようにmodeを指定して変更できる。
+Pathを省略すると、基本的にアプリの**Document**から操作を行う。ファイルが存在しない場合は、ファイルを作成する。 これは基本動作で、`SQuery(at: "db_file_path", mode: .readWrite)`のようにmodeを指定して変更できる。
 
 ## Create Table
 ```swift
