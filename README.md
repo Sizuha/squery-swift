@@ -122,11 +122,11 @@ class Account: SQueryRow {
 		cursor.forEachColumn { cur, i in
 			let name = cur.getColumnName(i)
 			switch name {
-			case "id": self.id = cursor.getString(i) ?? ""
-			case "name": self.name = cursor.getString(i) ?? ""
-			case "age": self.age = cursor.getint(i) ?? 0
+			case "id": self.id = cur.getString(i) ?? ""
+			case "name": self.name = cur.getString(i) ?? ""
+			case "age": self.age = cur.getint(i) ?? 0
 			case "joinDate": 
-				let joindateRaw = cursor.getString(i)
+				let joindateRaw = cur.getString(i)
 				self.joinDate = joindateRaw != nil
 					? SQuery.newDateTimeFormat.date(from: joindateRaw)
 					: nil
