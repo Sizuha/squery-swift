@@ -21,7 +21,7 @@ let dbConn = SQuery(url: dbUrl).open()
 defer { dbConn?.close() }
 ```
 
-Pathを省略すると、基本的にアプリの**Document**から操作を行う。ファイルが存在しない場合は、ファイルを作成する。 これは基本動作で、`SQuery("db_file_path", mode: .readWrite)`のようにmodeを指定して変更できる。
+Pathを省略すると、基本的にアプリの**Document**から操作を行う。ファイルが存在しない場合は、ファイルを作成する。 これは基本動作で、`SQuery(at: "db_file_path", mode: .readWrite)`のようにmodeを指定して変更できる。
 
 ## Create Table
 ```swift
@@ -122,11 +122,11 @@ class Account: SQueryRow {
 		cursor.forEachColumn { cur, i in
 			let name = cur.getColumnName(i)
 			switch name {
-			case "id": self.id = cursor.getString(i) ?? ""
-			case "name": self.id = cursor.getString(i) ?? ""
-			case "age": self.id = cursor.getint(i) ?? 0
+			case "id": self.id = cur.getString(i) ?? ""
+			case "name": self.name = cur.getString(i) ?? ""
+			case "age": self.age = cur.getint(i) ?? 0
 			case "joinDate": 
-				let joindateRaw = cursor.getString(i)
+				let joindateRaw = cur.getString(i)
 				self.joinDate = joindateRaw != nil
 					? SQuery.newDateTimeFormat.date(from: joindateRaw)
 					: nil
@@ -154,7 +154,7 @@ if let table = SQuery(at: "user.db").from("account") {
 }
 ```
 
-配列を作成たくない場合、(for each)
+配列を作成したくない場合、(for each)
 ```swift
 if let table = SQuery(at: "user.db").from("account") {
 	defer { table.close() }
