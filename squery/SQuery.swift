@@ -100,7 +100,8 @@ public class SQLiteConnection {
 		printLog("prepare sql: \(sql)")
 		
 		var stmt: OpaquePointer? = nil
-		if sqlite3_prepare_v2(db, sql, Int32(sql.utf8.count), &stmt, nil) == SQLITE_OK {
+		let result = sqlite3_prepare_v2(db, sql, Int32(sql.utf8.count), &stmt, nil)
+		if result == SQLITE_OK {
 			bindAll(stmt, args: args)
 		}
 		return stmt
@@ -169,13 +170,17 @@ public class SQLiteConnection {
 		}
 	}
 	
-	public func query(sql: String, _ args: Any?...) -> SQLiteCursor {
-		let stmt = prepare(sql: sql, args)
-		return SQLiteCursor(stmt!)
+	public func query(sql: String, _ args: Any?...) -> SQLiteCursor? {
+		if let stmt = prepare(sql: sql, args) {
+			return SQLiteCursor(stmt)
+		}
+		return nil
 	}
-	public func query(sql: String, args: [Any?]) -> SQLiteCursor {
-		let stmt = prepare(sql: sql, args: args)
-		return SQLiteCursor(stmt!)
+	public func query(sql: String, args: [Any?]) -> SQLiteCursor? {
+		if let stmt = prepare(sql: sql, args: args) {
+			return SQLiteCursor(stmt)
+		}
+		return nil
 	}
 	
 	private func executeScalar(_ stmt: OpaquePointer?) -> Int? {
@@ -220,14 +225,21 @@ public class SQLiteConnection {
 	}
 	
 	public func execute(sql: String, _ args: Any?...) -> Bool {
-		let stmt = prepare(sql: sql, args: args)
-		return excute(stmt!)
+		if let stmt = prepare(sql: sql, args: args) {
+			return excute(stmt)
+		}
+		
+		//let error = getLastError()
+		return false
 	}
 	public func execute(sql: String, args: [Any?]) -> Bool {
-		let stmt = prepare(sql: sql, args: args)
-		return excute(stmt!)
+		if let stmt = prepare(sql: sql, args: args) {
+			return excute(stmt)
+		}
+		
+		//let error = getLastError()
+		return false
 	}
-	
 	
 	public func getUserVersion() -> Int {
 		return executeScalar(sql: "PRAGMA user_version;") ?? 0
@@ -1414,7 +1426,7 @@ public class TableQuery {
 	/// ```
 	///
 	/// - Returns: クエリの結果(Curosr)
-	public func select() -> SQLiteCursor {
+	public func select() -> SQLiteCursor? {
 		let sql = makeQuerySql()
 		let args = sqlJoinOnArgs + sqlWhereArgs + sqlHavingArgs
 		return db.query(sql: sql, args: args)
@@ -1428,8 +1440,11 @@ public class TableQuery {
 	///   - factory: SQueryRow型のinstanceを生成するclouser
 	///   - forEach: 各行(row)で行う処理(clouser)
 	///   - each: 各行(row)のデータ、SQueryRow型
-	public func select<T: SQueryRow>(factory: ()->T, forEach: (_ each: T)->Void) {
-		let cursor = select()
+	public func select<T: SQueryRow>(factory: ()->T, forEach: (_ each: T)->Void) -> Bool {
+		guard let cursor = select() else {
+			return false
+		}
+		
 		defer {
 			cursor.close()
 		}
@@ -1438,11 +1453,13 @@ public class TableQuery {
 			newRow.loadFrom(cursor: cursor)
 			forEach(newRow)
 		}
+		
+		return true
 	}
 
 	public func select<T: SQueryRow>(factory: ()->T) -> [T] {
 		var rows = [T].init()
-		select(factory: factory) { row in rows.append(row) }
+		let _ = select(factory: factory) { row in rows.append(row) }
 		return rows;
 	}
 	
