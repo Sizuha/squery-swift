@@ -41,6 +41,20 @@ public enum SQLiteColumnType: String {
 	case none = "NONE"
 }
 
+public class SQLiteError: Error {
+	let code: Int32
+	private let message: String
+	
+	init(code: Int32, message: String = "") {
+		self.code = code
+		self.message = message
+	}
+	
+	public var localizedDescription: String {
+		return self.message
+	}
+}
+
 private let SQLITE_TRANSIENT = unsafeBitCast(OpaquePointer(bitPattern: -1), to: sqlite3_destructor_type.self)
 
 private var enableDebugMode = true
@@ -93,10 +107,10 @@ public class SQLiteConnection {
 		return 0
 	}
 	
-	private func prepare(sql: String, _ args: Any?...) -> OpaquePointer? {
-		return prepare(sql: sql, args: args)
+	private func prepare(sql: String, _ args: Any?...) throws -> OpaquePointer {
+		return try prepare(sql: sql, args: args)
 	}
-	private func prepare(sql: String, args: [Any?]) -> OpaquePointer? {
+	private func prepare(sql: String, args: [Any?]) throws -> OpaquePointer {
 		printLog("prepare sql: \(sql)")
 		
 		var stmt: OpaquePointer? = nil
@@ -104,7 +118,11 @@ public class SQLiteConnection {
 		if result == SQLITE_OK {
 			bindAll(stmt, args: args)
 		}
-		return stmt
+		else {
+			throw SQLiteError(code: result, message: getLastError() ?? "")
+		}
+		
+		return stmt!
 	}
 
 	private func bindAll(_ stmt: OpaquePointer?, _ args: Any?...) {
@@ -170,24 +188,16 @@ public class SQLiteConnection {
 		}
 	}
 	
-	public func query(sql: String, _ args: Any?...) -> SQLiteCursor? {
-		if let stmt = prepare(sql: sql, args) {
-			return SQLiteCursor(stmt)
-		}
-		return nil
+	public func query(sql: String, _ args: Any?...) throws -> SQLiteCursor {
+		let stmt = try prepare(sql: sql, args)
+		return SQLiteCursor(stmt)
 	}
-	public func query(sql: String, args: [Any?]) -> SQLiteCursor? {
-		if let stmt = prepare(sql: sql, args: args) {
-			return SQLiteCursor(stmt)
-		}
-		return nil
+	public func query(sql: String, args: [Any?]) throws -> SQLiteCursor {
+		let stmt = try prepare(sql: sql, args: args)
+		return SQLiteCursor(stmt)
 	}
 	
-	private func executeScalar(_ stmt: OpaquePointer?) -> Int? {
-		guard let stmt = stmt else {
-			return nil
-		}
-		
+	private func executeScalar(_ stmt: OpaquePointer) -> Int? {
 		let curosr = SQLiteCursor(stmt)
 		defer {
 			curosr.close()
@@ -201,51 +211,42 @@ public class SQLiteConnection {
 		return nil
 	}
 
-	public func executeScalar(sql: String, _ args: Any?...) -> Int? {
-		let stmt = prepare(sql: sql, args)
+	public func executeScalar(sql: String, _ args: Any?...) throws -> Int? {
+		let stmt = try prepare(sql: sql, args)
 		return executeScalar(stmt)
 	}
-	public func executeScalar(sql: String, args: [Any?]) -> Int? {
-		let stmt = prepare(sql: sql, args: args)
+	public func executeScalar(sql: String, args: [Any?]) throws -> Int? {
+		let stmt = try prepare(sql: sql, args: args)
 		return executeScalar(stmt)
 	}
 	
-	private func excute(_ stmt: OpaquePointer) -> Bool {
+	private func excute(_ stmt: OpaquePointer) throws {
 		let res = sqlite3_step(stmt)
 		defer {
 			sqlite3_finalize(stmt)
 		}
 		
 		switch res {
-		case SQLITE_OK, SQLITE_ROW, SQLITE_DONE:
-			return true
+		case SQLITE_OK, SQLITE_ROW, SQLITE_DONE: return
 		default:
-			return false
+			throw SQLiteError(code: res, message: getLastError() ?? "")
 		}
 	}
 	
-	public func execute(sql: String, _ args: Any?...) -> Bool {
-		if let stmt = prepare(sql: sql, args: args) {
-			return excute(stmt)
-		}
-		
-		//let error = getLastError()
-		return false
+	public func execute(sql: String, _ args: Any?...) throws {
+		let stmt = try prepare(sql: sql, args: args)
+		try excute(stmt)
 	}
-	public func execute(sql: String, args: [Any?]) -> Bool {
-		if let stmt = prepare(sql: sql, args: args) {
-			return excute(stmt)
-		}
-		
-		//let error = getLastError()
-		return false
+	public func execute(sql: String, args: [Any?]) throws {
+		let stmt = try prepare(sql: sql, args: args)
+		try excute(stmt)
 	}
 	
 	public func getUserVersion() -> Int {
-		return executeScalar(sql: "PRAGMA user_version;") ?? 0
+		return (try? executeScalar(sql: "PRAGMA user_version;") ?? 0) ?? 0
 	}
 	public func setUserVersion(_ ver: Int) -> Bool {
-		return execute(sql: "PRAGMA user_version=\(ver);")
+		return (try? execute(sql: "PRAGMA user_version=\(ver);")) != nil
 	}
 
 	//--- TRANSACTION ---
@@ -261,29 +262,29 @@ public class SQLiteConnection {
 			modeStr = "DEFERRED"
 		}
 		
-		return execute(sql: "BEGIN \(modeStr) TRANSACTION;")
+		return (try? execute(sql: "BEGIN \(modeStr) TRANSACTION;")) != nil
 	}
 	
 	public func endTransaction() -> Bool {
 		return commit()
 	}
 	public func commit() -> Bool {
-		return execute(sql: "COMMIT TRANSACTION;")
+		return (try? execute(sql: "COMMIT TRANSACTION;")) != nil
 	}
 	
 	public func setSavePoint(name: String) -> Bool {
-		return execute(sql: "SAVEPOINT \(name);")
+		return (try? execute(sql: "SAVEPOINT \(name);")) != nil
 	}
 	
 	public func releaseSavePoint(name: String) -> Bool {
-		return execute(sql: "RELEASE SAVEPOINT \(name);")
+		return (try? execute(sql: "RELEASE SAVEPOINT \(name);")) != nil
 	}
 	
 	public func rollback() -> Bool {
-		return execute(sql: "ROLLBACK TRANSACTION;")
+		return (try? execute(sql: "ROLLBACK TRANSACTION;")) != nil
 	}
 	public func rollback(toSavePoint: String) -> Bool {
-		return execute(sql: "ROLLBACK TO SAVEPOINT \(toSavePoint);")
+		return (try? execute(sql: "ROLLBACK TO SAVEPOINT \(toSavePoint);")) != nil
 	}
 }
 
@@ -779,7 +780,7 @@ public class TableCreator {
 		return self
 	}
 	
-	public func create(ifNotExists: Bool = true) -> Bool {
+	public func create(ifNotExists: Bool = true) throws {
 		var sql = "CREATE TABLE "
 		if (ifNotExists) {
 			sql.append("IF NOT EXISTS ")
@@ -837,7 +838,7 @@ public class TableCreator {
 		}
 		
 		sql.append(");")
-		return db.execute(sql: sql)
+		try db.execute(sql: sql)
 	}
 	
 	func close() {
@@ -1426,10 +1427,10 @@ public class TableQuery {
 	/// ```
 	///
 	/// - Returns: クエリの結果(Curosr)
-	public func select() -> SQLiteCursor? {
+	public func select() throws -> SQLiteCursor {
 		let sql = makeQuerySql()
 		let args = sqlJoinOnArgs + sqlWhereArgs + sqlHavingArgs
-		return db.query(sql: sql, args: args)
+		return try db.query(sql: sql, args: args)
 	}
 	
 	/// SELECTクエリを実行し、結果の各行(row)毎に処理を行う
@@ -1440,10 +1441,8 @@ public class TableQuery {
 	///   - factory: SQueryRow型のinstanceを生成するclouser
 	///   - forEach: 各行(row)で行う処理(clouser)
 	///   - each: 各行(row)のデータ、SQueryRow型
-	public func select<T: SQueryRow>(factory: ()->T, forEach: (_ each: T)->Void) -> Bool {
-		guard let cursor = select() else {
-			return false
-		}
+	public func select<T: SQueryRow>(factory: ()->T, forEach: (_ each: T)->Void) throws {
+		let cursor = try select()
 		
 		defer {
 			cursor.close()
@@ -1453,24 +1452,27 @@ public class TableQuery {
 			newRow.loadFrom(cursor: cursor)
 			forEach(newRow)
 		}
-		
-		return true
 	}
 
-	public func select<T: SQueryRow>(factory: ()->T) -> [T] {
+	public func select<T: SQueryRow>(factory: ()->T) throws -> [T] {
 		var rows = [T].init()
-		let _ = select(factory: factory) { row in rows.append(row) }
+		try select(factory: factory) { row in rows.append(row) }
 		return rows;
 	}
 	
-	public func selectOne<T: SQueryRow>(factory: ()->T) -> T? {
-		let rows = limit(1).select(factory: factory)
+	public func selectOne<T: SQueryRow>(factory: ()->T) throws -> T? {
+		let rows = try limit(1).select(factory: factory)
 		return rows.isEmpty ? nil : rows[0]
 	}
 	
 	public func count() -> Int? {
 		let sql = makeQuerySql(forCount: true)
-		return db.executeScalar(sql: sql, args: sqlWhereArgs)
+		do {
+			return try db.executeScalar(sql: sql, args: sqlWhereArgs)
+		}
+		catch {
+			return nil
+		}
 	}
 	
 	//--- INSERT ---
@@ -1482,15 +1484,15 @@ public class TableQuery {
 		return self
 	}
 	
-	public func insert(values row: SQueryRow, except cols: [String] = []) -> Bool {
-		return values(row).insert(except: cols)
+	public func insert(values row: SQueryRow, except cols: [String] = []) throws {
+		try values(row).insert(except: cols)
 	}
 	
-	public func insert(values data: [String:Any?], except cols: [String] = []) -> Bool {
-		return values(data).insert(except: cols)
+	public func insert(values data: [String:Any?], except cols: [String] = []) throws {
+		try values(data).insert(except: cols)
 	}
 	
-	public func insert(except exceptCols: [String] = []) -> Bool {
+	public func insert(except exceptCols: [String] = []) throws {
 		var sql = "INSERT INTO \(tableName) "
 		
 		var cols = ""
@@ -1514,17 +1516,17 @@ public class TableQuery {
 		}
 		
 		sql.append("(\(cols)) VALUES (\(vals));")
-		return db.execute(sql: sql, args: args)
+		try db.execute(sql: sql, args: args)
 	}
 	
 	//--- UPDATE ---
-	public func update(autoMakeWhere: Bool = true) -> Int {
-		return update(set: sqlValues, autoMakeWhere: autoMakeWhere)
+	public func update(autoMakeWhere: Bool = true) throws -> Int {
+		return try update(set: sqlValues, autoMakeWhere: autoMakeWhere)
 	}
-	public func update(set values: SQueryRow, autoMakeWhere: Bool = true) -> Int {
-		return update(set: values.toValues(), autoMakeWhere: autoMakeWhere)
+	public func update(set values: SQueryRow, autoMakeWhere: Bool = true) throws -> Int {
+		return try update(set: values.toValues(), autoMakeWhere: autoMakeWhere)
 	}
-	public func update(set values: [String:Any?], autoMakeWhere: Bool = true) -> Int {
+	public func update(set values: [String:Any?], autoMakeWhere: Bool = true) throws -> Int {
 		var sql = "UPDATE \(tableName) SET "
 		var args = [Any?]()
 		var first = true
@@ -1559,11 +1561,9 @@ public class TableQuery {
 		}
 		
 		sql.append(";")
-		if db.execute(sql: sql, args: args) {
-			return db.getLastChangedRowCount()
-		}
 		
-		return 0
+		try db.execute(sql: sql, args: args)
+		return db.getLastChangedRowCount()
 	}
 	
 	//--- DELETE ---
@@ -1574,23 +1574,43 @@ public class TableQuery {
 		}
 		
 		sql.append(";")
-		if db.execute(sql: sql, args: sqlWhereArgs) {
+		do {
+			try db.execute(sql: sql, args: sqlWhereArgs)
 			return db.getLastChangedRowCount()
 		}
-		return 0
+		catch {
+			return 0
+		}
 	}
 	
 	//--- DROP ---
 	public func drop() -> Bool {
-		return db.execute(sql: "DROP TABLE \(tableName);")
+		do {
+			try db.execute(sql: "DROP TABLE \(tableName);")
+			return true
+		}
+		catch {
+			return false
+		}
 	}
 
 	//--- INSERT or UPDATE ---
 	public func insertOrUpdate(exceptInsert cols: [String] = []) -> Bool {
-		return insert(except: cols) || update() > 0
+		do {
+			try insert(except: cols)
+			return true
+		}
+		catch {
+			return (try? update() > 0) ?? false
+		}
 	}
 	
 	public func updateOrInsert(exceptInsert cols: [String] = []) -> Bool {
-		return update() > 0 || insert(except: cols)
+		do {
+			return try update() > 0
+		}
+		catch {
+			return (try? insert(except: cols)) != nil
+		}
 	}
 }
