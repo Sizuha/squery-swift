@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 0.2
+//  - Version: 0.3
 //  - Require Library: libsqlite3.tbd
 //
 
@@ -694,21 +694,21 @@ public class SQuery {
 	public static let utcTimeZone = TimeZone(abbreviation: "UTC")!
 	public static let standardLocal = Locale(identifier: "en_US_POSIX")
 	
-	public static var newDateTimeFormat: DateFormatter {
+	public static func newDateTimeFormat() -> DateFormatter {
 		let fmt = DateFormatter()
 		fmt.locale = standardLocal
 		fmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
 		fmt.timeZone = utcTimeZone
 		return fmt
 	}
-	public static var newDateFormat: DateFormatter {
+	public static func newDateFormat() -> DateFormatter {
 		let fmt = DateFormatter()
 		fmt.locale = standardLocal
 		fmt.dateFormat = "yyyy-MM-dd"
 		fmt.timeZone = utcTimeZone
 		return fmt
 	}
-	public static var newTimeFormat: DateFormatter {
+	public static func newTimeFormat() -> DateFormatter {
 		let fmt = DateFormatter()
 		fmt.locale = standardLocal
 		fmt.dateFormat = "HH:mm:ss"
@@ -872,7 +872,7 @@ class Account: SQueryRow {
         age = cursor.getInt(index)
       case "join_date":
         joinDate: Date? = joindateRaw != nil
-          ? SQuery.newDateTimeFormat.date(from: joindateRaw)
+          ? SQuery.newDateTimeFormat().date(from: joindateRaw)
           : nil
       }
     }
@@ -881,7 +881,7 @@ class Account: SQueryRow {
   func toValues() -> Dictionary<String,Any> {
 	return [
       "id": id, "pwd": pass, "name": name, "age": age,
-      "join_date": SQuery.newDateTimeFormat.string(joinDate)
+      "join_date": SQuery.newDateTimeFormat().string(joinDate)
     ]
   }
 }
