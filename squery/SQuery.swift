@@ -1462,7 +1462,7 @@ public class TableQuery {
 	
 	public func selectOne<T: SQueryRow>(factory: ()->T) throws -> T? {
 		let rows = try limit(1).select(factory: factory)
-		return rows.isEmpty ? nil : rows[0]
+		return rows.first
 	}
 	
 	public func count() -> Int? {
