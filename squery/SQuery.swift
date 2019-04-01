@@ -841,7 +841,7 @@ public class TableCreator {
 		try db.execute(sql: sql)
 	}
 	
-	func close() {
+	public func close() {
 		db.close()
 	}
 }

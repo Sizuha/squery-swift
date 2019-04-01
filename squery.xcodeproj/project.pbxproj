@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D56BEE1D21CB50450070AB45 /* squery.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D56BEE1321CB50450070AB45 /* squery.framework */; };
+		D56BEE1D21CB50450070AB45 /* SQuery.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D56BEE1321CB50450070AB45 /* SQuery.framework */; };
 		D56BEE2221CB50450070AB45 /* squeryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56BEE2121CB50450070AB45 /* squeryTests.swift */; };
 		D56BEE2421CB50450070AB45 /* SQuery.h in Headers */ = {isa = PBXBuildFile; fileRef = D56BEE1621CB50450070AB45 /* SQuery.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D56BEE2E21CB50730070AB45 /* SQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56BEE2D21CB50730070AB45 /* SQuery.swift */; };
@@ -25,10 +25,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		D56BEE1321CB50450070AB45 /* squery.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = squery.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D56BEE1321CB50450070AB45 /* SQuery.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SQuery.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D56BEE1621CB50450070AB45 /* SQuery.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SQuery.h; sourceTree = "<group>"; };
 		D56BEE1721CB50450070AB45 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D56BEE1C21CB50450070AB45 /* squeryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = squeryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D56BEE1C21CB50450070AB45 /* SQueryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SQueryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D56BEE2121CB50450070AB45 /* squeryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = squeryTests.swift; sourceTree = "<group>"; };
 		D56BEE2321CB50450070AB45 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D56BEE2D21CB50730070AB45 /* SQuery.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SQuery.swift; sourceTree = "<group>"; };
@@ -48,7 +48,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D56BEE1D21CB50450070AB45 /* squery.framework in Frameworks */,
+				D56BEE1D21CB50450070AB45 /* SQuery.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -68,8 +68,8 @@
 		D56BEE1421CB50450070AB45 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D56BEE1321CB50450070AB45 /* squery.framework */,
-				D56BEE1C21CB50450070AB45 /* squeryTests.xctest */,
+				D56BEE1321CB50450070AB45 /* SQuery.framework */,
+				D56BEE1C21CB50450070AB45 /* SQueryTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -115,9 +115,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		D56BEE1221CB50450070AB45 /* squery */ = {
+		D56BEE1221CB50450070AB45 /* SQuery */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D56BEE2721CB50450070AB45 /* Build configuration list for PBXNativeTarget "squery" */;
+			buildConfigurationList = D56BEE2721CB50450070AB45 /* Build configuration list for PBXNativeTarget "SQuery" */;
 			buildPhases = (
 				D56BEE0E21CB50450070AB45 /* Headers */,
 				D56BEE0F21CB50450070AB45 /* Sources */,
@@ -128,14 +128,14 @@
 			);
 			dependencies = (
 			);
-			name = squery;
+			name = SQuery;
 			productName = squery;
-			productReference = D56BEE1321CB50450070AB45 /* squery.framework */;
+			productReference = D56BEE1321CB50450070AB45 /* SQuery.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		D56BEE1B21CB50450070AB45 /* squeryTests */ = {
+		D56BEE1B21CB50450070AB45 /* SQueryTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D56BEE2A21CB50450070AB45 /* Build configuration list for PBXNativeTarget "squeryTests" */;
+			buildConfigurationList = D56BEE2A21CB50450070AB45 /* Build configuration list for PBXNativeTarget "SQueryTests" */;
 			buildPhases = (
 				D56BEE1821CB50450070AB45 /* Sources */,
 				D56BEE1921CB50450070AB45 /* Frameworks */,
@@ -146,9 +146,9 @@
 			dependencies = (
 				D56BEE1F21CB50450070AB45 /* PBXTargetDependency */,
 			);
-			name = squeryTests;
+			name = SQueryTests;
 			productName = squeryTests;
-			productReference = D56BEE1C21CB50450070AB45 /* squeryTests.xctest */;
+			productReference = D56BEE1C21CB50450070AB45 /* SQueryTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -163,10 +163,11 @@
 				TargetAttributes = {
 					D56BEE1221CB50450070AB45 = {
 						CreatedOnToolsVersion = 10.1;
-						LastSwiftMigration = 1010;
+						LastSwiftMigration = 1020;
 					};
 					D56BEE1B21CB50450070AB45 = {
 						CreatedOnToolsVersion = 10.1;
+						LastSwiftMigration = 1020;
 					};
 				};
 			};
@@ -176,14 +177,15 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				Base,
 			);
 			mainGroup = D56BEE0921CB50450070AB45;
 			productRefGroup = D56BEE1421CB50450070AB45 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D56BEE1221CB50450070AB45 /* squery */,
-				D56BEE1B21CB50450070AB45 /* squeryTests */,
+				D56BEE1221CB50450070AB45 /* SQuery */,
+				D56BEE1B21CB50450070AB45 /* SQueryTests */,
 			);
 		};
 /* End PBXProject section */
@@ -227,7 +229,7 @@
 /* Begin PBXTargetDependency section */
 		D56BEE1F21CB50450070AB45 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = D56BEE1221CB50450070AB45 /* squery */;
+			target = D56BEE1221CB50450070AB45 /* SQuery */;
 			targetProxy = D56BEE1E21CB50450070AB45 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -285,7 +287,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -343,7 +345,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -377,7 +379,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -403,7 +405,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.kishe.sizuha.squery;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -422,7 +424,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.kishe.sizuha.squeryTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -441,7 +443,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.kishe.sizuha.squeryTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -458,7 +460,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D56BEE2721CB50450070AB45 /* Build configuration list for PBXNativeTarget "squery" */ = {
+		D56BEE2721CB50450070AB45 /* Build configuration list for PBXNativeTarget "SQuery" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D56BEE2821CB50450070AB45 /* Debug */,
@@ -467,7 +469,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D56BEE2A21CB50450070AB45 /* Build configuration list for PBXNativeTarget "squeryTests" */ = {
+		D56BEE2A21CB50450070AB45 /* Build configuration list for PBXNativeTarget "SQueryTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D56BEE2B21CB50450070AB45 /* Debug */,
