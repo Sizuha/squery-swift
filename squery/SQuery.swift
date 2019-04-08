@@ -11,7 +11,7 @@ import SQLite3
 
 public protocol SQueryRow {
 	func loadFrom(cursor: SQLiteCursor)
-	func toValues() -> Dictionary<String,Any?>
+	func toValues() -> [String:Any?]
 }
 
 public enum SQLiteOpenMode {
