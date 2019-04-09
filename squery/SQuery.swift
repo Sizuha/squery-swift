@@ -254,33 +254,43 @@ public class SQLiteConnection {
 		return executeScalar(stmt)
 	}
 	
-	private func excute(_ stmt: OpaquePointer) throws {
+	private func excute(_ stmt: OpaquePointer)  -> SQLiteError? {
 		let res = sqlite3_step(stmt)
 		defer {
 			sqlite3_finalize(stmt)
 		}
 		
 		switch res {
-		case SQLITE_OK, SQLITE_ROW, SQLITE_DONE: return
+		case SQLITE_OK, SQLITE_ROW, SQLITE_DONE: return nil
 		default:
-			throw SQLiteError(code: res, message: getLastError() ?? "")
+			return SQLiteError(code: res, message: getLastError() ?? "")
 		}
 	}
 	
-	public func execute(sql: String, _ args: Any?...) throws {
-		let stmt = try prepare(sql: sql, args: args)
-		try excute(stmt)
+	public func execute(sql: String, _ args: Any?...) -> SQLiteError? {
+		do {
+			let stmt = try prepare(sql: sql, args: args)
+			return excute(stmt)
+		}
+		catch let error {
+			return toSqliteError(error)
+		}
 	}
-	public func execute(sql: String, args: [Any?]) throws {
-		let stmt = try prepare(sql: sql, args: args)
-		try excute(stmt)
+	public func execute(sql: String, args: [Any?])  -> SQLiteError? {
+		do {
+			let stmt = try prepare(sql: sql, args: args)
+			return excute(stmt)
+		}
+		catch let error {
+			return toSqliteError(error)
+		}
 	}
 	
 	public func getUserVersion() -> Int {
 		return (try? executeScalar(sql: "PRAGMA user_version;") ?? 0) ?? 0
 	}
 	public func setUserVersion(_ ver: Int) -> Bool {
-		return (try? execute(sql: "PRAGMA user_version=\(ver);")) != nil
+		return execute(sql: "PRAGMA user_version=\(ver);") != nil
 	}
 
 	//--- TRANSACTION ---
@@ -296,29 +306,29 @@ public class SQLiteConnection {
 			modeStr = "DEFERRED"
 		}
 		
-		return (try? execute(sql: "BEGIN \(modeStr) TRANSACTION;")) != nil
+		return execute(sql: "BEGIN \(modeStr) TRANSACTION;") != nil
 	}
 	
 	public func endTransaction() -> Bool {
 		return commit()
 	}
 	public func commit() -> Bool {
-		return (try? execute(sql: "COMMIT TRANSACTION;")) != nil
+		return execute(sql: "COMMIT TRANSACTION;") != nil
 	}
 	
 	public func setSavePoint(name: String) -> Bool {
-		return (try? execute(sql: "SAVEPOINT \(name);")) != nil
+		return execute(sql: "SAVEPOINT \(name);") != nil
 	}
 	
 	public func releaseSavePoint(name: String) -> Bool {
-		return (try? execute(sql: "RELEASE SAVEPOINT \(name);")) != nil
+		return execute(sql: "RELEASE SAVEPOINT \(name);") != nil
 	}
 	
 	public func rollback() -> Bool {
-		return (try? execute(sql: "ROLLBACK TRANSACTION;")) != nil
+		return execute(sql: "ROLLBACK TRANSACTION;") != nil
 	}
 	public func rollback(toSavePoint: String) -> Bool {
-		return (try? execute(sql: "ROLLBACK TO SAVEPOINT \(toSavePoint);")) != nil
+		return execute(sql: "ROLLBACK TO SAVEPOINT \(toSavePoint);") != nil
 	}
 }
 
@@ -944,13 +954,7 @@ public class TableCreator {
 		}
 		
 		sql.append(");")
-		do {
-			try db.execute(sql: sql)
-			return nil
-		}
-		catch let error {
-			return toSqliteError(error)
-		}
+		return db.execute(sql: sql)
 	}
 	
 	public func close() {
@@ -1638,12 +1642,11 @@ public class TableQuery {
 		sql.append("(\(cols)) VALUES (\(vals));")
 		
 		let result = UpdateQueryResult()
-		do {
-			try db.execute(sql: sql, args: args)
-			result.rowCount = 1
+		if let error = db.execute(sql: sql, args: args) {
+			result.error = error
 		}
-		catch let error {
-			result.error = toSqliteError(error)
+		else {
+			result.rowCount = 1
 		}
 		return result
 	}
@@ -1692,12 +1695,11 @@ public class TableQuery {
 		sql.append(";")
 		
 		let result = UpdateQueryResult()
-		do {
-			try db.execute(sql: sql, args: args)
-			result.rowCount = db.getLastChangedRowCount()
+		if let error = db.execute(sql: sql, args: args) {
+			result.error = error
 		}
-		catch let error {
-			result.error = toSqliteError(error)
+		else {
+			result.rowCount = db.getLastChangedRowCount()
 		}
 		return result
 	}
@@ -1711,25 +1713,18 @@ public class TableQuery {
 		sql.append(";")
 		
 		let result = UpdateQueryResult()
-		do {
-			try db.execute(sql: sql, args: sqlWhereArgs)
-			result.rowCount = db.getLastChangedRowCount()
+		if let error = db.execute(sql: sql, args: sqlWhereArgs) {
+			result.error = error
 		}
-		catch let error {
-			result.error = toSqliteError(error)
+		else {
+			result.rowCount = db.getLastChangedRowCount()
 		}
 		return result
 	}
 	
 	//--- DROP ---
 	public func drop() -> Bool {
-		do {
-			try db.execute(sql: "DROP TABLE \(tableName);")
-			return true
-		}
-		catch {
-			return false
-		}
+		return db.execute(sql: "DROP TABLE \(tableName);") != nil
 	}
 
 	//--- INSERT or UPDATE ---
