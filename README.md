@@ -124,9 +124,10 @@ class Account: SQueryRow {
 	var id = ""
 	var name = ""
 	var age = 0
-	var joinDate: Date? = nil
+	var joinDate: Date? = nil	
+	private val dateFmt = SQuery.newDateTimeFormat
 
-	func loadFrom(cursor: SQLiteCursor) {
+	func load(from cursor: SQLiteCursor) {
 		cursor.forEachColumn { cur, i in
 			let name = cur.getColumnName(i)
 			switch name {
@@ -136,7 +137,7 @@ class Account: SQueryRow {
 			case "joinDate": 
 				let joindateRaw = cur.getString(i)
 				self.joinDate = joindateRaw != nil
-					? SQuery.newDateTimeFormat.date(from: joindateRaw)
+					? dateFmt.date(from: joindateRaw)
 					: nil
 			default: break
 			}
@@ -144,7 +145,12 @@ class Account: SQueryRow {
 	}
 
 	func toValues() -> [String:Any?] {
-	// ...
+		return [
+			"id": id,
+			"name": name,
+			"age": age,
+			"joinDate": joinDate != nil ? dateFmt.string(from: joinDate) : nil
+		]
 	}
 }
 ```
@@ -153,11 +159,11 @@ Seelctの結果をDataオブジェクトの配列で貰える。
 ```swift
 if let table = SQuery(at: "user.db").from("account") {
 	defer { table.close() }
-	let rows: [Account] = try? table
+	let rows: [Account] = table
 		.setWhere("joinDate >= ?", "2018-01-01 00:00:00")
 		.orderBy("joinDate")
 		.orderBy("age", desc: true)
-		.select { Account() /* ここで空のDataオブジェクトを生成する */ } ?? []
+		.select { Account() /* ここで空のDataオブジェクトを生成する */ }.0
 	// ...
 }
 ```
@@ -174,6 +180,16 @@ if let table = SQuery(at: "user.db").from("account") {
 		// ...
 		}
 	// ...
+}
+```
+
+結果のrowが１個か０の場合
+```swift
+if let table = SQuery(at: "user.db").from("account") {
+	defer { table.close() }
+	if let row = table.setWhere("id=?", "xxx").selectOne{ Account() }.0 {
+		// 結果あり
+	}
 }
 ```
 
