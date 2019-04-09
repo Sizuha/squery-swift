@@ -10,7 +10,7 @@ import Foundation
 import SQLite3
 
 public protocol SQueryRow {
-	func loadFrom(cursor: SQLiteCursor)
+	func load(from cursor: SQLiteCursor)
 	func toValues() -> [String:Any?]
 }
 
@@ -123,22 +123,23 @@ public class SQLiteConnection {
 		return 0
 	}
 	
-	private func prepare(sql: String, _ args: Any?...) throws -> OpaquePointer {
-		return try prepare(sql: sql, args: args)
+	private func prepare(sql: String, _ args: Any?...) -> (OpaquePointer?, SQLiteError?) {
+		return prepare(sql: sql, args: args)
 	}
-	private func prepare(sql: String, args: [Any?]) throws -> OpaquePointer {
+	private func prepare(sql: String, args: [Any?]) -> (OpaquePointer?, SQLiteError?) {
 		printLog("prepare sql: \(sql)")
 		
 		var stmt: OpaquePointer? = nil
+		var err: SQLiteError? = nil
+		
 		let result = sqlite3_prepare_v2(db, sql, Int32(sql.utf8.count), &stmt, nil)
 		if result == SQLITE_OK {
 			bindAll(stmt, args: args)
 		}
 		else {
-			throw SQLiteError(code: result, message: getLastError() ?? "")
+			err = SQLiteError(code: result, message: getLastError() ?? "")
 		}
-		
-		return stmt!
+		return (stmt, err)
 	}
 
 	private func bindAll(_ stmt: OpaquePointer?, _ args: Any?...) {
@@ -205,29 +206,11 @@ public class SQLiteConnection {
 	}
 	
 	public func query(sql: String, _ args: Any?...) -> SQLiteCursor {
-		var stmt: OpaquePointer? = nil
-		var err: SQLiteError? = nil
-		
-		do {
-			stmt = try prepare(sql: sql, args)
-		}
-		catch let error {
-			err = toSqliteError(error)
-		}
-		
+		let (stmt, err) = prepare(sql: sql, args)
 		return SQLiteCursor(stmt, error: err)
 	}
 	public func query(sql: String, args: [Any?]) -> SQLiteCursor {
-		var stmt: OpaquePointer? = nil
-		var err: SQLiteError? = nil
-
-		do {
-			stmt = try prepare(sql: sql, args: args)
-		}
-		catch let error {
-			err = toSqliteError(error)
-		}
-		
+		let (stmt, err) = prepare(sql: sql, args: args)
 		return SQLiteCursor(stmt, error: err)
 	}
 	
@@ -246,12 +229,14 @@ public class SQLiteConnection {
 	}
 
 	public func executeScalar(sql: String, _ args: Any?...) throws -> Int? {
-		let stmt = try prepare(sql: sql, args)
-		return executeScalar(stmt)
+		let (stmt, err) = prepare(sql: sql, args)
+		if let error = err { throw error }
+		return executeScalar(stmt!)
 	}
 	public func executeScalar(sql: String, args: [Any?]) throws -> Int? {
-		let stmt = try prepare(sql: sql, args: args)
-		return executeScalar(stmt)
+		let (stmt, err) = prepare(sql: sql, args: args)
+		if let error = err { throw error }
+		return executeScalar(stmt!)
 	}
 	
 	private func excute(_ stmt: OpaquePointer)  -> SQLiteError? {
@@ -268,26 +253,16 @@ public class SQLiteConnection {
 	}
 	
 	public func execute(sql: String, _ args: Any?...) -> SQLiteError? {
-		do {
-			let stmt = try prepare(sql: sql, args: args)
-			return excute(stmt)
-		}
-		catch let error {
-			return toSqliteError(error)
-		}
+		let (stmt, err) = prepare(sql: sql, args: args)
+		return err ?? excute(stmt!)
 	}
 	public func execute(sql: String, args: [Any?])  -> SQLiteError? {
-		do {
-			let stmt = try prepare(sql: sql, args: args)
-			return excute(stmt)
-		}
-		catch let error {
-			return toSqliteError(error)
-		}
+		let (stmt, err) = prepare(sql: sql, args: args)
+		return err ?? excute(stmt!)
 	}
 	
 	public func getUserVersion() -> Int {
-		return (try? executeScalar(sql: "PRAGMA user_version;") ?? 0) ?? 0
+		return (try? executeScalar(sql: "PRAGMA user_version;")) ?? 0
 	}
 	public func setUserVersion(_ ver: Int) -> Bool {
 		return execute(sql: "PRAGMA user_version=\(ver);") == nil
@@ -975,7 +950,7 @@ class Account: SQueryRow {
   var age = 0
   var joinDate: Date? = nil
 
-  func loadFrom(cursor: SQLiteCursor) {
+  func load(from cursor: SQLiteCursor) {
     cursor.forEachColumn { cursor, index in
       let colName = cursor.getColumnName(index)
       switch colName {
@@ -1026,7 +1001,7 @@ SELECT One
 // SELECT * account ORDER BY age DESC LIMIT 1
 let oldest: Account = try? tableAcc
   .orderBy(age, desc: true)
-  .selectOne { Account() }
+  .selectOne { Account() }.0
 ```
 
 COUNT
@@ -1568,35 +1543,27 @@ public class TableQuery {
 		}
 		while cursor.next() {
 			let newRow = factory()
-			newRow.loadFrom(cursor: cursor)
+			newRow.load(from: cursor)
 			forEach(newRow)
 		}
 		
 		return cursor.error
 	}
 
-	public func select<T: SQueryRow>(factory: ()->T) throws -> [T] {
-		var rows = [T].init()
-		
-		let err = select(factory: factory) { row in rows.append(row) }
-		if let err = err { throw err }
-		
-		return rows;
+	public func select<T: SQueryRow>(factory: ()->T) -> ([T], SQLiteError?) {
+		var rows = [T]()
+		let error = select(factory: factory) { row in rows.append(row) }
+		return (rows, error);
 	}
 	
-	public func selectOne<T: SQueryRow>(factory: ()->T) throws -> T? {
-		let rows = try limit(1).select(factory: factory)
-		return rows.first
+	public func selectOne<T: SQueryRow>(factory: ()->T) -> (T?, SQLiteError?) {
+		let (rows, error) = limit(1).select(factory: factory)
+		return (rows.first, error)
 	}
 	
 	public func count() -> Int? {
 		let sql = makeQuerySql(forCount: true)
-		do {
-			return try db.executeScalar(sql: sql, args: sqlWhereArgs)
-		}
-		catch {
-			return nil
-		}
+		return try? db.executeScalar(sql: sql, args: sqlWhereArgs)
 	}
 	
 	//--- INSERT ---
