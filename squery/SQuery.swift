@@ -290,7 +290,7 @@ public class SQLiteConnection {
 		return (try? executeScalar(sql: "PRAGMA user_version;") ?? 0) ?? 0
 	}
 	public func setUserVersion(_ ver: Int) -> Bool {
-		return execute(sql: "PRAGMA user_version=\(ver);") != nil
+		return execute(sql: "PRAGMA user_version=\(ver);") == nil
 	}
 
 	//--- TRANSACTION ---
@@ -306,29 +306,29 @@ public class SQLiteConnection {
 			modeStr = "DEFERRED"
 		}
 		
-		return execute(sql: "BEGIN \(modeStr) TRANSACTION;") != nil
+		return execute(sql: "BEGIN \(modeStr) TRANSACTION;") == nil
 	}
 	
 	public func endTransaction() -> Bool {
 		return commit()
 	}
 	public func commit() -> Bool {
-		return execute(sql: "COMMIT TRANSACTION;") != nil
+		return execute(sql: "COMMIT TRANSACTION;") == nil
 	}
 	
 	public func setSavePoint(name: String) -> Bool {
-		return execute(sql: "SAVEPOINT \(name);") != nil
+		return execute(sql: "SAVEPOINT \(name);") == nil
 	}
 	
 	public func releaseSavePoint(name: String) -> Bool {
-		return execute(sql: "RELEASE SAVEPOINT \(name);") != nil
+		return execute(sql: "RELEASE SAVEPOINT \(name);") == nil
 	}
 	
 	public func rollback() -> Bool {
-		return execute(sql: "ROLLBACK TRANSACTION;") != nil
+		return execute(sql: "ROLLBACK TRANSACTION;") == nil
 	}
 	public func rollback(toSavePoint: String) -> Bool {
-		return execute(sql: "ROLLBACK TO SAVEPOINT \(toSavePoint);") != nil
+		return execute(sql: "ROLLBACK TO SAVEPOINT \(toSavePoint);") == nil
 	}
 }
 
@@ -1724,7 +1724,7 @@ public class TableQuery {
 	
 	//--- DROP ---
 	public func drop() -> Bool {
-		return db.execute(sql: "DROP TABLE \(tableName);") != nil
+		return db.execute(sql: "DROP TABLE \(tableName);") == nil
 	}
 
 	//--- INSERT or UPDATE ---
