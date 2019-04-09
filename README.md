@@ -127,7 +127,7 @@ class Account: SQueryRow {
 	var joinDate: Date? = nil	
 	private val dateFmt = SQuery.newDateTimeFormat
 
-	func loadFrom(cursor: SQLiteCursor) {
+	func load(from cursor: SQLiteCursor) {
 		cursor.forEachColumn { cur, i in
 			let name = cur.getColumnName(i)
 			switch name {
