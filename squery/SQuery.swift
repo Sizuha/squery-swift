@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 0.3
+//  - Version: 1.1
 //  - Require Library: libsqlite3.tbd
 //
 
@@ -55,6 +55,14 @@ public class SQLiteError: Error {
 	}
 }
 
+public class UpdateQueryResult {
+	public var rowCount: Int = 0
+	public var error: SQLiteError? = nil
+	public var isSuccess: Bool {
+		get { return error == nil }
+	}
+}
+
 private let SQLITE_TRANSIENT = unsafeBitCast(OpaquePointer(bitPattern: -1), to: sqlite3_destructor_type.self)
 
 private var enableDebugMode = true
@@ -68,8 +76,16 @@ private func printLog(_ text: String, _ args: CVarArg...) {
 	}
 }
 
+private func toSqliteError(_ error: Error) -> SQLiteError {
+	if let sqlErr = error as? SQLiteError {
+		return sqlErr
+	}
+	else {
+		return SQLiteError(code: SQLITE_ERROR, message: error.localizedDescription)
+	}
+}
 
-/**
+/***********************************************************************************************************************
 SQLite DBを操作するクラス。
 
 DBファイルを開いて、クエリを実行できる。
@@ -188,13 +204,31 @@ public class SQLiteConnection {
 		}
 	}
 	
-	public func query(sql: String, _ args: Any?...) throws -> SQLiteCursor {
-		let stmt = try prepare(sql: sql, args)
-		return SQLiteCursor(stmt)
+	public func query(sql: String, _ args: Any?...) -> SQLiteCursor {
+		var stmt: OpaquePointer? = nil
+		var err: SQLiteError? = nil
+		
+		do {
+			stmt = try prepare(sql: sql, args)
+		}
+		catch let error {
+			err = toSqliteError(error)
+		}
+		
+		return SQLiteCursor(stmt, error: err)
 	}
-	public func query(sql: String, args: [Any?]) throws -> SQLiteCursor {
-		let stmt = try prepare(sql: sql, args: args)
-		return SQLiteCursor(stmt)
+	public func query(sql: String, args: [Any?]) -> SQLiteCursor {
+		var stmt: OpaquePointer? = nil
+		var err: SQLiteError? = nil
+
+		do {
+			stmt = try prepare(sql: sql, args: args)
+		}
+		catch let error {
+			err = toSqliteError(error)
+		}
+		
+		return SQLiteCursor(stmt, error: err)
 	}
 	
 	private func executeScalar(_ stmt: OpaquePointer) -> Int? {
@@ -290,6 +324,12 @@ public class SQLiteConnection {
 
 
 /**
+
+*/
+
+
+
+/***********************************************************************************************************************
 SQLiteのクエリの結果(row達)を探索する
 
 使い方
@@ -339,7 +379,19 @@ if let tblAcc = SQuery(at:"user.db").from("account") {
 public class SQLiteCursor {
 	private var stmt: OpaquePointer? = nil
 	
+	/// エラーが無い場合に「true」
+	public var isSuccess: Bool {
+		get { return stmt != nil }
+	}
+	
+	private var errorObj: SQLiteError? = nil
+	/// エラーの内容
+	public var error: SQLiteError? {
+		get { return errorObj }
+	}
+	
 	private var columnCountRaw: Int32 = 0
+	/// 結果rowのcolumn数
 	public var columnCount: Int {
 		return Int(columnCountRaw)
 	}
@@ -351,8 +403,14 @@ public class SQLiteCursor {
 	///
 	/// - Parameter stmt:
 	///   `sqlite3_prepare_v2()`もしくはSQLiteConnectionクラスの`prepare()`の戻り値
-	public required init(_ stmt: OpaquePointer) {
+	///   errorの場合は「nil」
+	/// - Parameter error:
+	///   エラーの内容、無い場合は「nil」
+	public required init(_ stmt: OpaquePointer?, error: SQLiteError? = nil) {
+		self.errorObj = error
 		self.stmt = stmt
+		guard isSuccess else { return }
+		
 		columnCountRaw = sqlite3_column_count(stmt)
 		
 		for i in 0..<columnCountRaw {
@@ -364,12 +422,15 @@ public class SQLiteCursor {
 	/// 初期状態に戻る。
 	/// rowをまた習得するには `next()` をコール。
 	public func reset() {
+		guard isSuccess else { return }
 		sqlite3_reset(stmt)
 	}
 	
 	/// 次のrowを習得する
 	/// - Returns: rowがあったら**true**
 	public func next() -> Bool {
+		guard isSuccess else { return false }
+		
 		let res = sqlite3_step(stmt)
 		switch res {
 		case SQLITE_ROW:
@@ -433,6 +494,7 @@ public class SQLiteCursor {
 	//--- get Datas ---
 	
 	private func getDataType(_ col: Int) -> Int32 {
+		guard isSuccess else { return SQLITE_NULL }
 		return sqlite3_column_type(stmt, Int32(col))
 	}
 	
@@ -468,18 +530,36 @@ public class SQLiteCursor {
 			: Int64(sqlite3_column_int64(stmt, Int32(col)))
 	}
 	
+	/// columnからString型データを習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns:
+	///   1) データが**NULL**の場合: nil
+	///   2) それ以外: 文字列（String型）
 	public func getString(_ col: Int) -> String? {
 		return isNull(col)
 			? nil
 			: String(cString: sqlite3_column_text(stmt, Int32(col)))
 	}
 	
+	/// columnからDouble型データを習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns:
+	///   1) データが**NULL**の場合: nil
+	///   2) それ以外: Double型の値
 	public func getDouble(_ col: Int) -> Double? {
 		return isNull(col)
 			? nil
 			: sqlite3_column_double(stmt, Int32(col))
 	}
 	
+	/// columnからFloat型データを習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns:
+	///   1) データが**NULL**の場合: nil
+	///   2) それ以外: Falot型の値
 	public func getFloat(_ col: Int) -> Float? {
 		if let value = getDouble(col) {
 			return Float(value)
@@ -487,12 +567,24 @@ public class SQLiteCursor {
 		return nil
 	}
 	
+	/// columnからBool型（true/false）データを習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns:
+	///   1) データが**NULL**の場合: nil
+	///   2) それ以外: Bool型の値
 	public func getBool(_ col: Int) -> Bool? {
 		return isNull(col)
 			? nil
 			: getInt(col) != 0
 	}
 	
+	/// columnからBinaryデータを習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns:
+	///   1) データが**NULL**の場合: nil
+	///   2) それ以外: Byte Array
 	public func getBlob(_ col: Int) -> [UInt8]? {
 		guard !isNull(col) else { return nil }
 		if let data = sqlite3_column_blob(stmt, Int32(col)) {
@@ -501,10 +593,19 @@ public class SQLiteCursor {
 		return nil
 	}
 	
+	/// columnからBinaryデータのポインターを習得
+	///
+	/// - Parameter col: columnのindex
+	/// - Returns:
+	///   1) データが**NULL**の場合: nil
+	///   2) それ以外: BLOBデータのポインター
 	public func getBlobRaw(_ col: Int) -> UnsafeRawPointer {
 		return sqlite3_column_blob(stmt, Int32(col))
 	}
 	
+	/// 現在のrowが持っている全データをDictionary形式で返す
+	///
+	/// - Returns: 現在のrowの全データを `["column名":データ]` 形式で返す
 	public func toDictionary() -> [String:Any?] {
 		var result = [String:Any?]()
 		forEachColumn { cur, i in
@@ -529,6 +630,10 @@ public class SQLiteCursor {
 		return result
 	}
 	
+	/// Cursorが持っている全データをDictionaryの配列で返す
+	///
+	/// - Parameter closeCursor: 作業完了後すぐCursorをクローズする
+	/// - Returns: 各rowのデータを`toDictionary()`でDictionary型で作成し、それらを配列でまとめる
 	public func toDictionaryAll(closeCursor: Bool = false) -> [[String:Any?]] {
 		var result = [[String:Any?]]()
 		reset()
@@ -541,7 +646,8 @@ public class SQLiteCursor {
 	}
 }
 
-/**
+
+/***********************************************************************************************************************
 SQLite DBをべ便利に扱う為のライブラリ
 
 使い方
@@ -780,7 +886,7 @@ public class TableCreator {
 		return self
 	}
 	
-	public func create(ifNotExists: Bool = true) throws {
+	public func create(ifNotExists: Bool = true) -> SQLiteError? {
 		var sql = "CREATE TABLE "
 		if (ifNotExists) {
 			sql.append("IF NOT EXISTS ")
@@ -838,7 +944,13 @@ public class TableCreator {
 		}
 		
 		sql.append(");")
-		try db.execute(sql: sql)
+		do {
+			try db.execute(sql: sql)
+			return nil
+		}
+		catch let error {
+			return toSqliteError(error)
+		}
 	}
 	
 	public func close() {
@@ -846,7 +958,8 @@ public class TableCreator {
 	}
 }
 
-/**
+
+/***********************************************************************************************************************
 SQLite DBの一つのTableに対して、クエリ分を作成し、実行する
 
 Rowデータのオブジェクト（例）
@@ -907,7 +1020,7 @@ SELECT One
 ---
 ```
 // SELECT * account ORDER BY age DESC LIMIT 1
-let oldest: Account = tableAcc
+let oldest: Account = try? tableAcc
   .orderBy(age, desc: true)
   .selectOne { Account() }
 ```
@@ -1427,10 +1540,10 @@ public class TableQuery {
 	/// ```
 	///
 	/// - Returns: クエリの結果(Curosr)
-	public func select() throws -> SQLiteCursor {
+	public func select() -> SQLiteCursor {
 		let sql = makeQuerySql()
 		let args = sqlJoinOnArgs + sqlWhereArgs + sqlHavingArgs
-		return try db.query(sql: sql, args: args)
+		return db.query(sql: sql, args: args)
 	}
 	
 	/// SELECTクエリを実行し、結果の各行(row)毎に処理を行う
@@ -1441,8 +1554,10 @@ public class TableQuery {
 	///   - factory: SQueryRow型のinstanceを生成するclouser
 	///   - forEach: 各行(row)で行う処理(clouser)
 	///   - each: 各行(row)のデータ、SQueryRow型
-	public func select<T: SQueryRow>(factory: ()->T, forEach: (_ each: T)->Void) throws {
-		let cursor = try select()
+	/// - Returns:
+	///   エラーが無い場合は「nil」を返す
+	public func select<T: SQueryRow>(factory: ()->T, forEach: (_ each: T)->Void) -> SQLiteError? {
+		let cursor = select()
 		
 		defer {
 			cursor.close()
@@ -1452,11 +1567,16 @@ public class TableQuery {
 			newRow.loadFrom(cursor: cursor)
 			forEach(newRow)
 		}
+		
+		return cursor.error
 	}
 
 	public func select<T: SQueryRow>(factory: ()->T) throws -> [T] {
 		var rows = [T].init()
-		try select(factory: factory) { row in rows.append(row) }
+		
+		let err = select(factory: factory) { row in rows.append(row) }
+		if let err = err { throw err }
+		
 		return rows;
 	}
 	
@@ -1484,15 +1604,15 @@ public class TableQuery {
 		return self
 	}
 	
-	public func insert(values row: SQueryRow, except cols: [String] = []) throws {
-		try values(row).insert(except: cols)
+	public func insert(values row: SQueryRow, except cols: [String] = []) -> UpdateQueryResult {
+		return values(row).insert(except: cols)
 	}
 	
-	public func insert(values data: [String:Any?], except cols: [String] = []) throws {
-		try values(data).insert(except: cols)
+	public func insert(values data: [String:Any?], except cols: [String] = []) -> UpdateQueryResult {
+		return values(data).insert(except: cols)
 	}
 	
-	public func insert(except exceptCols: [String] = []) throws {
+	public func insert(except exceptCols: [String] = []) -> UpdateQueryResult {
 		var sql = "INSERT INTO \(tableName) "
 		
 		var cols = ""
@@ -1516,17 +1636,26 @@ public class TableQuery {
 		}
 		
 		sql.append("(\(cols)) VALUES (\(vals));")
-		try db.execute(sql: sql, args: args)
+		
+		let result = UpdateQueryResult()
+		do {
+			try db.execute(sql: sql, args: args)
+			result.rowCount = 1
+		}
+		catch let error {
+			result.error = toSqliteError(error)
+		}
+		return result
 	}
 	
 	//--- UPDATE ---
-	public func update(autoMakeWhere: Bool = true) throws -> Int {
-		return try update(set: sqlValues, autoMakeWhere: autoMakeWhere)
+	public func update(autoMakeWhere: Bool = true) -> UpdateQueryResult {
+		return update(set: sqlValues, autoMakeWhere: autoMakeWhere)
 	}
-	public func update(set values: SQueryRow, autoMakeWhere: Bool = true) throws -> Int {
-		return try update(set: values.toValues(), autoMakeWhere: autoMakeWhere)
+	public func update(set values: SQueryRow, autoMakeWhere: Bool = true) -> UpdateQueryResult {
+		return update(set: values.toValues(), autoMakeWhere: autoMakeWhere)
 	}
-	public func update(set values: [String:Any?], autoMakeWhere: Bool = true) throws -> Int {
+	public func update(set values: [String:Any?], autoMakeWhere: Bool = true) -> UpdateQueryResult {
 		var sql = "UPDATE \(tableName) SET "
 		var args = [Any?]()
 		var first = true
@@ -1562,25 +1691,34 @@ public class TableQuery {
 		
 		sql.append(";")
 		
-		try db.execute(sql: sql, args: args)
-		return db.getLastChangedRowCount()
+		let result = UpdateQueryResult()
+		do {
+			try db.execute(sql: sql, args: args)
+			result.rowCount = db.getLastChangedRowCount()
+		}
+		catch let error {
+			result.error = toSqliteError(error)
+		}
+		return result
 	}
 	
 	//--- DELETE ---
-	public func delete() -> Int {
+	public func delete() -> UpdateQueryResult {
 		var sql = "DELETE FROM \(tableName)"
 		if !sqlWhere.isEmpty {
 			sql.append(" WHERE \(sqlWhere)")
 		}
-		
 		sql.append(";")
+		
+		let result = UpdateQueryResult()
 		do {
 			try db.execute(sql: sql, args: sqlWhereArgs)
-			return db.getLastChangedRowCount()
+			result.rowCount = db.getLastChangedRowCount()
 		}
-		catch {
-			return 0
+		catch let error {
+			result.error = toSqliteError(error)
 		}
+		return result
 	}
 	
 	//--- DROP ---
@@ -1596,21 +1734,10 @@ public class TableQuery {
 
 	//--- INSERT or UPDATE ---
 	public func insertOrUpdate(exceptInsert cols: [String] = []) -> Bool {
-		do {
-			try insert(except: cols)
-			return true
-		}
-		catch {
-			return (try? update() > 0) ?? false
-		}
+		return insert(except: cols).isSuccess || update().rowCount > 0
 	}
 	
 	public func updateOrInsert(exceptInsert cols: [String] = []) -> Bool {
-		do {
-			return try update() > 0
-		}
-		catch {
-			return (try? insert(except: cols)) != nil
-		}
+		return update().rowCount > 0 || insert(except: cols).isSuccess
 	}
 }
