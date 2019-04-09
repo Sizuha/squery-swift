@@ -27,7 +27,7 @@ Pathを省略すると、基本的にアプリの**Document**から操作を行�
 ```swift
 if let table = SQuery(at: "some.db").talbeCreator(name: "TableName") {
 	defer { table.close() } // 自動でDBをclose
-	table
+	let _ = table
 		.addAutoInc("idx") // PK and AUTO INCREMENT
 		.addColumn("title", type: .text, notNull: true)
 		.addColumn("date", type: .integer)
@@ -43,13 +43,21 @@ if let table = SQuery(at: "some.db").talbeCreator(name: "TableName") {
 ```
 他に、`addPrimaryKey()`でPrimary Key(主キー)を指定できる
 
+## Drop Table
+```swift
+if let table = SQuery(at: "some.db").from("TableName") {
+	defer { table.close() }
+	let _ = table.drop()
+}
+```
+
 ## Select
 ```swift
-// SELECT * FROM account WHERE joinDate >= 2018 ORDER BY joinDate, age DESC;
+// SELECT * FROM account WHERE joinDate >= '2018-01-01 00:00:00' ORDER BY joinDate, age DESC;
 if let table = SQuery(at: "user.db").from("account") {
 	defer { table.close() } // 自動でDBをclose	
 	let cursor: SQLiteCursor = table
-		.setWhere("joinDate >= ?", 2018)
+		.setWhere("joinDate >= ?", "2018-01-01 00:00:00")
 		.orderBy("joinDate")
 		.orderBy("age", desc: true)
 		.select() // 結果を「Cursor」で返す
@@ -63,11 +71,11 @@ if let table = SQuery(at: "user.db").from("account") {
 ### whereAnd
 where句の場合、ANDで条件を繋ぐ事がよくある。その時に`whereAnd()`を使えば便利。
 ```swift
-// SELECT * FROM account WHERE (joinDate >= 2018) AND (age >= 18);
+// SELECT * FROM account WHERE (joinDate >= '2018-01-01 00:00:00') AND (age >= 18);
 if let table = SQuery(at: "user.db").from("account") {
 	defer { table.close() } // 自動でDBをclose	
 	let cursor: SQLiteCursor = table
-		.whereAnd("joinDate >= ?", 2018)
+		.whereAnd("joinDate >= ?", "2018-01-01 00:00:00")
 		.whereAnd("age >= ?", 18)
 		.select()
 	defer { cursor.close() }
@@ -81,7 +89,7 @@ if let table = SQuery(at: "user.db").from("account") {
 if let tblAcc = SQuery(at:"user.db").from("account") {
 	defer { tblAcc.close() }
 	if let cursor = tblAcc
-		.setWhere("joinDate >= ", 2018)
+		.setWhere("joinDate >= ", "2018-01-01 00:00:00")
 		.orderBy("joinDate")
 		.orderBy("age", desc: true)
 		.columns("id","name","age","joinDate")
@@ -103,14 +111,14 @@ if let tblAcc = SQuery(at:"user.db").from("account") {
 }
 ```
 
-Cursorが持っているデータをDictionaryで貰うこともできる
+Cursorが持っているデータをDictionaryで貰うこともできる。
 ```swift
 let result: [[String:Any?]] = cursor.toDictionaryAll(closeCursor: true)
 ```
 
 
 #### CursorからData Objectを作成
-先ずは、Data classに**SQueryRow** protocolを具現する.
+先ずは、Data classに**SQueryRow** protocolを具現する。
 ```swift
 class Account: SQueryRow {
 	var id = ""
@@ -141,15 +149,15 @@ class Account: SQueryRow {
 }
 ```
 
-Seelctの結果をDataオブジェクトの配列で貰える
+Seelctの結果をDataオブジェクトの配列で貰える。
 ```swift
 if let table = SQuery(at: "user.db").from("account") {
 	defer { table.close() }
-	let rows: [Account] = table
-		.setWhere("joinDate >= ?", 2018)
+	let rows: [Account] = try? table
+		.setWhere("joinDate >= ?", "2018-01-01 00:00:00")
 		.orderBy("joinDate")
 		.orderBy("age", desc: true)
-		.select { Account() } // ここで空のDataオブジェクトを生成する
+		.select { Account() /* ここで空のDataオブジェクトを生成する */ } ?? []
 	// ...
 }
 ```
@@ -158,8 +166,8 @@ if let table = SQuery(at: "user.db").from("account") {
 ```swift
 if let table = SQuery(at: "user.db").from("account") {
 	defer { table.close() }
-	table
-		.setWhere("joinDate >= ?", 2018)
+	let _ = table
+		.setWhere("joinDate >= ?", "2018-01-01 00:00:00")
 		.orderBy("joinDate")
 		.orderBy("age", desc: true)
 		.select(factory:{ Account() }) { row: Account in
@@ -168,3 +176,92 @@ if let table = SQuery(at: "user.db").from("account") {
 	// ...
 }
 ```
+
+
+## Insert
+```swift
+if let table = SQuery(at: "user.db").from("account") {
+	defer { table.close() }
+	let item = Account()
+	item.id = "xxx"
+	// ...
+	let _ = table.insert(values: item)
+}
+```
+
+### Auto Incrementのcolumnの例外処理
+Auto Incrementで宣言されたcolumnはINSERTで直接データをセットできない。この場合、下記の様に除外するcolumnを指定できる。
+```swift
+if let table = SQuery(at: "some.db").from("TableName") {
+	defer { table.close() }
+	let item: [String:Any?] = [:]
+	// ...ここでデータの中身を入れる...
+	
+	// idxがAuto Incrementの場合
+	if table.insert(values: item, except:["idx"]).isSuccess {
+		// 成功
+	} else {
+		// 失敗
+	}
+}
+```
+
+## Update
+```swift
+// UPDATE account WHERE id='xxx' SET name='TESTER', ...;
+if let table = SQuery(at: "user.db").from("account") {
+	defer { table.close() }
+	
+	let item = Account()
+	item.id = "xxx"
+	item.name = "TESTER"
+	item.age = 20
+	item.joinDate = Date()
+	let rowCount = table
+		// 変更してはいけない「主キー(PK)」のcolumn名をここで指定しておく
+		.keys("id")
+		// keys()でPKを指定しておくと、WHERE句も自動で作成される
+		.update(set: item)
+		.rowCount
+}
+```
+
+```swift
+// UPDATE account WHERE id='xxx' SET name='TESTER';
+if let table = SQuery(at: "user.db").from("account") {
+	defer { table.close() }
+	let rowCount = table
+		.setWhere("id=?", "xxx")
+		.update(set: ["name": "TESTER"])
+		.rowCount
+}
+```
+
+## Insert or Update
+先にINSERTを試して失敗する場合、UPDATEを実行する。
+つまり新規のデータを登録する時、既に存在する場合は入れ替える。
+```swift
+if let table = SQuery(at: "user.db").from("account") {
+	defer { table.close() }
+	
+	let item = Account()
+	item.id = "xxx"
+	item.name = "TESTER"
+	item.age = 20
+	item.joinDate = Date()
+	let _ = table
+		.keys("id")
+		.values(item)
+		.insertOrUpdate()
+}
+```
+
+## Delete
+```swift
+if let table = SQuery(at: "user.db").from("account") {
+	defer { table.close() }
+	// DELETE FROM account WHERE id='xxx';
+	let _ = table.setWhere("id=?","xxx").delete()
+}
+```
+
