@@ -195,12 +195,13 @@ public class SQLiteConnection {
 					let data = arg as! [UInt8]
 					result = sqlite3_bind_blob(stmt, idx, data, Int32(data.count), SQLITE_TRANSIENT)
 					
-				default: continue
+				default:
+					fatalError("[SQuery] data binding error, Not Support Data-Type >> index: \(idx), data: \(arg.debugDescription)")
 				}
 			}
 			
 			guard result == SQLITE_OK else {
-				fatalError("[SQuery] bind data error >> index: \(idx), data: \(arg.debugDescription)")
+				fatalError("[SQuery] data binding error >> index: \(idx), data: \(arg.debugDescription)")
 			}
 		}
 	}
@@ -306,12 +307,6 @@ public class SQLiteConnection {
 		return execute(sql: "ROLLBACK TO SAVEPOINT \(toSavePoint);") == nil
 	}
 }
-
-
-/**
-
-*/
-
 
 
 /***********************************************************************************************************************
