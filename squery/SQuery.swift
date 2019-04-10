@@ -836,23 +836,23 @@ public class TableCreator {
 		self.db = db
 	}
 	
-	public func addAutoInc(_ name: String) -> Self {
+	public func addAutoInc(_ name: String, notNull: Bool = false, unique: Bool = false) -> Self {
 		let colDef = ColumnDefine(name)
 		colDef.type = .integer
 		colDef.autoInc = true
 		colDef.pk = true
-		colDef.unique = true
-		colDef.notNull = true
+		colDef.unique = notNull
+		colDef.notNull = unique
 		columns.append(colDef)
 		return self
 	}
 	
-	public func addPrimaryKey(_ name: String, type: SQLiteColumnType) -> Self {
+	public func addPrimaryKey(_ name: String, type: SQLiteColumnType, notNull: Bool = false, unique: Bool = false) -> Self {
 		let colDef = ColumnDefine(name)
 		colDef.type = type
 		colDef.pk = true
-		colDef.unique = true
-		colDef.notNull = true
+		colDef.unique = unique
+		colDef.notNull = notNull
 		columns.append(colDef)
 		return self
 	}
@@ -893,23 +893,19 @@ public class TableCreator {
 			
 			sql.append("\(col.name) \(col.type.rawValue)")
 			
-			if col.pk {
-				if isSinglePk {
-					if col.pk {
-						sql.append(" PRIMARY KEY")
-					}
-					if col.autoInc {
-						sql.append(" AUTOINCREMENT")
-					}
+			if col.notNull {
+				sql.append(" NOT NULL")
+			}
+			
+			if col.autoInc || col.pk && isSinglePk {
+				sql.append(" PRIMARY KEY")
+				if col.autoInc {
+					sql.append(" AUTOINCREMENT")
 				}
 			}
-			else {
-				if col.notNull {
-					sql.append(" NOT NULL")
-				}
-				if col.unique {
-					sql.append(" UNIQUE")
-				}
+			
+			if col.unique {
+				sql.append(" UNIQUE")
 			}
 		}
 		
