@@ -43,6 +43,8 @@ if let table = SQuery(at: "some.db").talbeCreator(name: "TableName") {
 ```
 他に、`addPrimaryKey()`でPrimary Key(主キー)を指定できる
 
+※ `table.close()`はTableではなくDBをクローズする。
+
 ## Drop Table
 ```swift
 if let table = SQuery(at: "some.db").from("TableName") {
