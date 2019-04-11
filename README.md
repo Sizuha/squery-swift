@@ -5,7 +5,7 @@ Simple SQLite Query Library for Swift (iOS)
 
 ## 準備
 1. **Linked Frameworks and Libraries**に「libsqlite3.tbd」を追加します
-1. 必要なソースは**SQuery.swift**だけです
+1. 必要なソースは**SQuery.swift**だけです（frameworkを追加したくない場合は**SQuery.swift**だけをコピー）
 
 ## DBのOpenとClose
 ```swift
