@@ -17,7 +17,7 @@
                BlueprintIdentifier = "D56BEE1221CB50450070AB45"
                BuildableName = "SQuery.framework"
                BlueprintName = "SQuery"
-               ReferencedContainer = "container:squery.xcodeproj">
+               ReferencedContainer = "container:SQuery.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,7 +35,7 @@
                BlueprintIdentifier = "D56BEE1B21CB50450070AB45"
                BuildableName = "SQueryTests.xctest"
                BlueprintName = "SQueryTests"
-               ReferencedContainer = "container:squery.xcodeproj">
+               ReferencedContainer = "container:SQuery.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -45,7 +45,7 @@
             BlueprintIdentifier = "D56BEE1221CB50450070AB45"
             BuildableName = "SQuery.framework"
             BlueprintName = "SQuery"
-            ReferencedContainer = "container:squery.xcodeproj">
+            ReferencedContainer = "container:SQuery.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -67,7 +67,7 @@
             BlueprintIdentifier = "D56BEE1221CB50450070AB45"
             BuildableName = "SQuery.framework"
             BlueprintName = "SQuery"
-            ReferencedContainer = "container:squery.xcodeproj">
+            ReferencedContainer = "container:SQuery.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -85,7 +85,7 @@
             BlueprintIdentifier = "D56BEE1221CB50450070AB45"
             BuildableName = "SQuery.framework"
             BlueprintName = "SQuery"
-            ReferencedContainer = "container:squery.xcodeproj">
+            ReferencedContainer = "container:SQuery.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>
@@ -94,6 +94,7 @@
    </AnalyzeAction>
    <ArchiveAction
       buildConfiguration = "Release"
+      customArchiveName = "SQuery"
       revealArchiveInOrganizer = "YES">
    </ArchiveAction>
 </Scheme>

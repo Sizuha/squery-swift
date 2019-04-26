@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		D56BEE1D21CB50450070AB45 /* SQuery.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D56BEE1321CB50450070AB45 /* SQuery.framework */; };
-		D56BEE2221CB50450070AB45 /* squeryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56BEE2121CB50450070AB45 /* squeryTests.swift */; };
+		D56BEE2221CB50450070AB45 /* SQueryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56BEE2121CB50450070AB45 /* SQueryTests.swift */; };
 		D56BEE2421CB50450070AB45 /* SQuery.h in Headers */ = {isa = PBXBuildFile; fileRef = D56BEE1621CB50450070AB45 /* SQuery.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D56BEE2E21CB50730070AB45 /* SQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56BEE2D21CB50730070AB45 /* SQuery.swift */; };
 		D56BEE3121CB50970070AB45 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D56BEE3021CB50970070AB45 /* libsqlite3.tbd */; };
@@ -29,7 +29,7 @@
 		D56BEE1621CB50450070AB45 /* SQuery.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SQuery.h; sourceTree = "<group>"; };
 		D56BEE1721CB50450070AB45 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D56BEE1C21CB50450070AB45 /* SQueryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SQueryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D56BEE2121CB50450070AB45 /* squeryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = squeryTests.swift; sourceTree = "<group>"; };
+		D56BEE2121CB50450070AB45 /* SQueryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQueryTests.swift; sourceTree = "<group>"; };
 		D56BEE2321CB50450070AB45 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D56BEE2D21CB50730070AB45 /* SQuery.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SQuery.swift; sourceTree = "<group>"; };
 		D56BEE3021CB50970070AB45 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
@@ -58,8 +58,8 @@
 		D56BEE0921CB50450070AB45 = {
 			isa = PBXGroup;
 			children = (
-				D56BEE1521CB50450070AB45 /* squery */,
-				D56BEE2021CB50450070AB45 /* squeryTests */,
+				D56BEE1521CB50450070AB45 /* SQuery */,
+				D56BEE2021CB50450070AB45 /* SQueryTests */,
 				D56BEE1421CB50450070AB45 /* Products */,
 				D56BEE2F21CB50960070AB45 /* Frameworks */,
 			);
@@ -74,23 +74,23 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D56BEE1521CB50450070AB45 /* squery */ = {
+		D56BEE1521CB50450070AB45 /* SQuery */ = {
 			isa = PBXGroup;
 			children = (
 				D56BEE1721CB50450070AB45 /* Info.plist */,
 				D56BEE1621CB50450070AB45 /* SQuery.h */,
 				D56BEE2D21CB50730070AB45 /* SQuery.swift */,
 			);
-			path = squery;
+			path = SQuery;
 			sourceTree = "<group>";
 		};
-		D56BEE2021CB50450070AB45 /* squeryTests */ = {
+		D56BEE2021CB50450070AB45 /* SQueryTests */ = {
 			isa = PBXGroup;
 			children = (
-				D56BEE2121CB50450070AB45 /* squeryTests.swift */,
+				D56BEE2121CB50450070AB45 /* SQueryTests.swift */,
 				D56BEE2321CB50450070AB45 /* Info.plist */,
 			);
-			path = squeryTests;
+			path = SQueryTests;
 			sourceTree = "<group>";
 		};
 		D56BEE2F21CB50960070AB45 /* Frameworks */ = {
@@ -171,7 +171,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D56BEE0D21CB50450070AB45 /* Build configuration list for PBXProject "squery" */;
+			buildConfigurationList = D56BEE0D21CB50450070AB45 /* Build configuration list for PBXProject "SQuery" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -220,7 +220,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D56BEE2221CB50450070AB45 /* squeryTests.swift in Sources */,
+				D56BEE2221CB50450070AB45 /* SQueryTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -388,7 +388,7 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64 arm64e";
+				VALID_ARCHS = "arm64 arm64e armv7 armv7s";
 			};
 			name = Debug;
 		};
@@ -418,7 +418,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64 arm64e";
+				VALID_ARCHS = "arm64 arm64e armv7 armv7s";
 			};
 			name = Release;
 		};
@@ -463,7 +463,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D56BEE0D21CB50450070AB45 /* Build configuration list for PBXProject "squery" */ = {
+		D56BEE0D21CB50450070AB45 /* Build configuration list for PBXProject "SQuery" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D56BEE2521CB50450070AB45 /* Debug */,

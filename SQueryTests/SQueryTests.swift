@@ -7,7 +7,7 @@
 //
 
 import XCTest
-@testable import squery
+@testable import SQuery
 
 class squeryTests: XCTestCase {
 
