@@ -9,9 +9,7 @@
 import Foundation
 import SQLite3
 
-
 fileprivate let stdCalendar = Calendar(identifier: .gregorian)
-
 
 public protocol SQueryRow {
 	func load(from cursor: SQLiteCursor)
@@ -781,8 +779,8 @@ public class SQuery {
 	
 	//--- Utils ---
 	
-	public static let utcTimeZone = TimeZone(abbreviation: "UTC")!
-	public static let standardLocal = Locale(identifier: "en_US_POSIX")
+	static let utcTimeZone = TimeZone(abbreviation: "UTC")!
+	static let standardLocal = Locale(identifier: "en_US_POSIX")
 	
 	public static func newDateTimeFormat() -> DateFormatter {
 		let fmt = DateFormatter()
