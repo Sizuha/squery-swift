@@ -4,11 +4,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "squery",
+    name: "SQuery",
     products: [
         // Products define the executables and libraries produced by a package, and make them visible to other packages.
         .library(
-            name: "squery",
+            name: "SQuery",
             targets: ["squery"]),
     ],
     dependencies: [
