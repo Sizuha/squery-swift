@@ -831,10 +831,10 @@ public class SQuery {
 //MARK: - TableCreator
 
 public class TableScheme {
-	let tableName: String
-	let columnSchemes: [ColumnScheme]
+	public let tableName: String
+	public let columnSchemes: [ColumnScheme]
 	
-	init(name: String, columns: [ColumnScheme]) {
+	public init(name: String, columns: [ColumnScheme]) {
 		self.tableName = name
 		self.columnSchemes = columns
 	}
