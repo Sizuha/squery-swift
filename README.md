@@ -38,7 +38,7 @@ let error = db.createTable(TableScheme(name: "TableName", columns: [
 	.column("rating", type: .float),
 	.column("memo", type: .text),
 	.column("link", type: .text),
-], ifNotExists: true)
+], ifNotExists: true))
 ```
 
 ## Drop Table
