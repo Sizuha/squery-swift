@@ -9,7 +9,6 @@
 import Foundation
 
 public protocol SQueryRowEx: SQueryRow {
-	static var tableName: String { get }
 	static var tableScheme: TableScheme { get }
 }
 
@@ -22,7 +21,7 @@ public extension SQLiteCursor {
 
 public extension SQuery {
 	func from(_ tableClass: SQueryRowEx.Type) -> TableQuery? {
-		return self.from(tableClass.tableName)
+		return self.from(tableClass.tableScheme.tableName)
 	}
 	
 	func create(tables: [SQueryRowEx.Type]) {
