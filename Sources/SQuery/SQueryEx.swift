@@ -8,12 +8,9 @@
 
 import Foundation
 
-public protocol DbTableCreatable {
-	static func createTable(db: SQuery)
-}
-
-public protocol SQueryRowEx: SQueryRow, DbTableCreatable {
+public protocol SQueryRowEx: SQueryRow {
 	static var tableName: String { get }
+	static var tableScheme: TableScheme { get }
 }
 
 public extension SQLiteCursor {
@@ -28,9 +25,9 @@ public extension SQuery {
 		return self.from(tableClass.tableName)
 	}
 	
-	func create(tables: [DbTableCreatable.Type]) {
+	func create(tables: [SQueryRowEx.Type]) {
 		for table in tables {
-			table.createTable(db: self)
+			_ = createTable(table.tableScheme)
 		}
 	}
 }

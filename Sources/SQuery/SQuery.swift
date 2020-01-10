@@ -780,6 +780,14 @@ public class SQuery {
 		return nil
 	}
 	
+	public func createTable(_ scheme: TableScheme, ifNotExists: Bool = true) -> Bool {
+		guard
+			let db = open()
+		else { return false }
+		
+		return TableCreator(db: db, scheme: scheme).create(ifNotExists: ifNotExists) == nil
+	}
+
 	
 	//--- Utils ---
 	
@@ -822,6 +830,30 @@ public class SQuery {
 
 //MARK: - TableCreator
 
+public class TableScheme {
+	let tableName: String
+	let columnSchemes: [ColumnScheme]
+	
+	init(name: String, columns: [ColumnScheme]) {
+		self.tableName = name
+		self.columnSchemes = columns
+	}
+}
+
+public enum ColumnScheme {
+	case key(
+		_ name: String,
+		autoInc: Bool = false,
+		type: SQLiteColumnType,
+		notNull: Bool = true,
+		unique: Bool = false)
+	case column(
+		_ name: String,
+		type: SQLiteColumnType,
+		notNull: Bool = false,
+		unique: Bool = false)
+}
+
 public class TableCreator {
 	private let db: SQLiteConnection
 	private let tableName: String
@@ -845,6 +877,29 @@ public class TableCreator {
 	public init(db: SQLiteConnection, name: String) {
 		self.tableName = name
 		self.db = db
+	}
+	
+	public convenience init(db: SQLiteConnection, scheme: TableScheme) {
+		self.init(db: db, name: scheme.tableName)
+		
+		for s in scheme.columnSchemes {
+			switch s {
+			case .key(
+				let name,
+				autoInc: let autoInc,
+				type: let type,
+				notNull: let notNull,
+				unique: let unique):
+				if autoInc {
+					_ = addAutoInc(name, notNull: true, unique: false)
+				}
+				else {
+					_ = addPrimaryKey(name, type: type, notNull: notNull, unique: unique)
+				}
+			case .column(let name, type: let type, notNull: let notNull, unique: let unique):
+				_ = addColumn(name, type: type, notNull: notNull, unique: unique)
+			}
+		}
 	}
 	
 	public func addAutoInc(_ name: String, notNull: Bool = false, unique: Bool = false) -> Self {
