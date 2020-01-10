@@ -25,25 +25,21 @@ Pathを省略すると、基本的にアプリの**Document**から操作を行�
 
 ## Create Table
 ```swift
-if let table = SQuery(at: "some.db").talbeCreator(name: "TableName") {
-	defer { table.close() } // 自動でDBをclose
-	let _ = table
-		.addAutoInc("idx") // PK and AUTO INCREMENT
-		.addColumn("title", type: .text, notNull: true)
-		.addColumn("date", type: .integer)
-		.addColumn("media", type: .integer)
-		.addColumn("progress", type: .float)
-		.addColumn("total", type: .integer)
-		.addColumn("fin", type: .integer)
-		.addColumn("rating", type: .float)
-		.addColumn("memo", type: .text)
-		.addColumn("link", type: .text)
-		.create(ifNotExists: true)
-}
+let db = SQuery(at: "some.db")
+defer { db.close() }
+let error = db.createTable(TableScheme(name: "TableName", columns: [
+	.key("idx", autoInc: true) // PK and AUTO INCREMENT
+	.column("title", type: .text, notNull: true),
+	.column("date", type: .integer),
+	.column("media", type: .integer),
+	.column("progress", type: .float),
+	.column("total", type: .integer),
+	.column("fin", type: .integer),
+	.column("rating", type: .float),
+	.column("memo", type: .text),
+	.column("link", type: .text),
+], ifNotExists: true)
 ```
-他に、`addPrimaryKey()`でPrimary Key(主キー)を指定できる
-
-※ `table.close()`はTableではなくDBをクローズする。
 
 ## Drop Table
 ```swift
