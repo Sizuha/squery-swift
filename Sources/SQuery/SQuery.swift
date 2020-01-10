@@ -78,12 +78,13 @@ private func printLog(_ text: String, _ args: CVarArg...) {
 	}
 }
 
-private func toSqliteError(_ error: Error) -> SQLiteError {
-	if let sqlErr = error as? SQLiteError {
-		return sqlErr
-	}
-	else {
-		return SQLiteError(code: SQLITE_ERROR, message: error.localizedDescription)
+extension Error {
+	func toSqliteError() -> SQLiteError {
+		if let sqlErr = self as? SQLiteError {
+			return sqlErr
+		}
+		
+		return SQLiteError(code: SQLITE_ERROR, message: self.localizedDescription)
 	}
 }
 
