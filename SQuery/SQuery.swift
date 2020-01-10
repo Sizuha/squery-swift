@@ -820,6 +820,8 @@ public class SQuery {
 	}
 }
 
+//MARK: - TableCreator
+
 public class TableCreator {
 	private let db: SQLiteConnection
 	private let tableName: String
@@ -1419,7 +1421,7 @@ public class TableQuery {
 		return self
 	}
 
-	//--- SELECT ---
+	//MARK: SELECT
 	
 	/// SELECT用のクエリ文を作成する
 	///
@@ -1568,7 +1570,7 @@ public class TableQuery {
 		return try? db.executeScalar(sql: sql, args: sqlWhereArgs)
 	}
 	
-	//--- INSERT ---
+	//MARK: INSERT
 	public func values(_ row: SQueryRow) -> Self {
 		return values(row.toValues())
 	}
@@ -1620,7 +1622,7 @@ public class TableQuery {
 		return result
 	}
 	
-	//--- UPDATE ---
+	//MARK: UPDATE
 	public func update(autoMakeWhere: Bool = true) -> UpdateQueryResult {
 		return update(set: sqlValues, autoMakeWhere: autoMakeWhere)
 	}
@@ -1673,7 +1675,7 @@ public class TableQuery {
 		return result
 	}
 	
-	//--- DELETE ---
+	//MARK: DELETE
 	public func delete() -> UpdateQueryResult {
 		var sql = "DELETE FROM \(tableName)"
 		if !sqlWhere.isEmpty {
@@ -1691,12 +1693,12 @@ public class TableQuery {
 		return result
 	}
 	
-	//--- DROP ---
+	//MARK: DROP
 	public func drop() -> Bool {
 		return db.execute(sql: "DROP TABLE \(tableName);") == nil
 	}
 
-	//--- INSERT or UPDATE ---
+	//MARK: INSERT or UPDATE
 	public func insertOrUpdate(exceptInsert cols: [String] = []) -> Bool {
 		return insert(except: cols).isSuccess || update().rowCount > 0
 	}
