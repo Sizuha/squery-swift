@@ -8,22 +8,22 @@
 
 import Foundation
 
-protocol DbTableCreatable {
+public protocol DbTableCreatable {
 	static func createTable(db: SQuery)
 }
 
-protocol SQueryRowEx: SQueryRow, DbTableCreatable {
+public protocol SQueryRowEx: SQueryRow, DbTableCreatable {
 	static var tableName: String { get }
 }
 
-extension SQLiteCursor {
+public extension SQLiteCursor {
 	func getDate(_ colIdx: Int, format: DateFormatter) -> Date? {
 		guard let raw = getString(colIdx) else { return nil }
 		return format.date(from: raw)
 	}
 }
 
-extension SQuery {
+public extension SQuery {
 	func from(_ tableClass: SQueryRowEx.Type) -> TableQuery? {
 		return self.from(tableClass.tableName)
 	}
@@ -35,11 +35,11 @@ extension SQuery {
 	}
 }
 
-extension TableQuery {
-	public func and(_ whereText: String, args: [Any?]) -> Self {
+public extension TableQuery {
+	func and(_ whereText: String, args: [Any?]) -> Self {
 		return whereAnd(whereText, args)
 	}
-	public func and(_ whereText: String, _ args: Any?...) -> Self {
+	func and(_ whereText: String, _ args: Any?...) -> Self {
 		return whereAnd(whereText, args: args)
 	}
 }

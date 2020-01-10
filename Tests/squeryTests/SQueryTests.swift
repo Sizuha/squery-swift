@@ -1,5 +1,5 @@
 import XCTest
-@testable import squery
+@testable import SQuery
 
 final class squeryTests: XCTestCase {
     func testExample() {
