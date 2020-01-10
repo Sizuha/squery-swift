@@ -22,7 +22,7 @@ let package = Package(
             name: "SQuery",
             dependencies: []),
         .testTarget(
-            name: "SQueryTests",
+            name: "squeryTests",
             dependencies: ["SQuery"]),
     ]
 )
