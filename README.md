@@ -153,7 +153,7 @@ class Account: SQueryRow {
 			Account.F_ID: id,
 			Account.F_NAME: name,
 			Account.F_AGE: age,
-			Account.F_JOIN: joinDate != nil ? dateFmt.string(from: joinDate) : nil
+			Account.F_JOIN: joinDate != nil ? dateFmt.string(from: joinDate) : sqlNil
 		]
 	}
 }
@@ -214,7 +214,7 @@ Auto Incrementで宣言されたcolumnはINSERTで直接データをセットで
 ```swift
 if let table = SQuery(at: "some.db").from("TableName") {
 	defer { table.close() }
-	let item: [String:Any?] = [:]
+	let item = [String:Any?]()
 	// ...ここでデータの中身を入れる...
 	
 	// idxがAuto Incrementの場合
@@ -284,4 +284,26 @@ if let table = SQuery(at: "user.db").from(Account.tableName) {
 	let _ = table.setWhere("\(Account.F_ID)=?","xxx").delete()
 }
 ```
+
+## nilの扱いに注意！！
+SwiftのDictionaryは、「nil」値が収納できない！
+```swift
+var sample = [String:Any?]()
+sample["comment"] = nil
+
+// この場合、sampleの中に「comment」自体が存在しない。つまり、「キー」にnilを投入するのは「キー」を削除することを意味する。
+```
+
+なので、DBに「nil」を収納したい場合は「nil」の代わりに「sqlNil」を使う！
+```swift
+import SQuery
+
+var sample = [String:Any?]()
+sample["comment"] = sqlNil
+
+// nilを確認
+let isNil = sample["comment"] is SqlNil
+```
+
+
 
