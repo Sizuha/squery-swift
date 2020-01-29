@@ -2,7 +2,7 @@
 //  SQueryEx.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.2
+//  - Version: 1.3
 //  - Require Library: libsqlite3.tbd
 //
 

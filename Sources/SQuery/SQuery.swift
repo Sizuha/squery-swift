@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.2
+//  - Version: 1.3
 //  - Require Library: libsqlite3.tbd
 //
 
@@ -10,6 +10,19 @@ import Foundation
 import SQLite3
 
 fileprivate let stdCalendar = Calendar(identifier: .gregorian)
+
+public class SqlNil: NSObject {
+	public override var description: String {
+		return "nil"
+	}
+	public override var debugDescription: String {
+		return "nil"
+	}
+	public let asNil: Any? = nil
+	
+	public override func isEqual(_ object: Any?) -> Bool { object is SqlNil }
+}
+public let sqlNil = SqlNil()
 
 public protocol SQueryRow {
 	func load(from cursor: SQLiteCursor)
@@ -160,7 +173,7 @@ public class SQLiteConnection {
 			idx += 1 // 1 based index
 			let result: Int32
 			
-			if arg == nil {
+			if arg == nil || arg is SqlNil {
 				result = sqlite3_bind_null(stmt, idx)
 			}
 			else {
