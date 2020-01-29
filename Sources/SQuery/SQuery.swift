@@ -13,10 +13,10 @@ fileprivate let stdCalendar = Calendar(identifier: .gregorian)
 
 public class SqlNil: NSObject {
 	public override var description: String {
-		return "nil"
+		return "sqlNil"
 	}
 	public override var debugDescription: String {
-		return "nil"
+		return "sqlNil"
 	}
 	public let asNil: Any? = nil
 	
