@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.3
+//  - Version: 1.4.1
 //  - Require Library: libsqlite3.tbd
 //
 
@@ -800,6 +800,18 @@ public class SQuery {
 		else { return false }
 		
 		return TableCreator(db: db, scheme: scheme).create(ifNotExists: ifNotExists) == nil
+	}
+	
+	public func getUserVersion() -> Int {
+		guard let db = open() else { return 0 }
+		defer { db.close() }
+		return db.getUserVersion()
+	}
+	
+	public func setUserVersion(_ version: Int) -> Bool {
+		guard let db = open() else { return false }
+		defer { db.close() }
+		return db.setUserVersion(version)
 	}
 
 	
