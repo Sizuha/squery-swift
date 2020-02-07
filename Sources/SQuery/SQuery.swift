@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.4.1
+//  - Version: 1.4.2
 //  - Require Library: libsqlite3.tbd
 //
 
@@ -225,7 +225,7 @@ public class SQLiteConnection {
 	}
 	
 	public func query(sql: String, _ args: Any?...) -> SQLiteCursor {
-		let (stmt, err) = prepare(sql: sql, args)
+		let (stmt, err) = prepare(sql: sql, args: args)
 		return SQLiteCursor(stmt, error: err)
 	}
 	public func query(sql: String, args: [Any?]) -> SQLiteCursor {
@@ -248,7 +248,7 @@ public class SQLiteConnection {
 	}
 
 	public func executeScalar(sql: String, _ args: Any?...) throws -> Int? {
-		let (stmt, err) = prepare(sql: sql, args)
+		let (stmt, err) = prepare(sql: sql, args: args)
 		if let error = err { throw error }
 		return executeScalar(stmt!)
 	}
