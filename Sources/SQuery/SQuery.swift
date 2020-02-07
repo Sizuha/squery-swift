@@ -164,7 +164,7 @@ public class SQLiteConnection {
 		bindAll(stmt, args: args)
 	}
 	private func bindAll(_ stmt: OpaquePointer?, args: [Any?]) {
-		guard let stmt = stmt else {
+		guard let stmt = stmt, !args.isEmpty else {
 			return
 		}
 		
