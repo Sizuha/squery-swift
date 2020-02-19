@@ -910,7 +910,7 @@ public enum ColumnScheme {
 	case def(
 		_ name: String,
 		type: SQLiteColumnType,
-		_ constraint: [ColumnConstraint])
+		_ constraint: [ColumnConstraint] = [])
 }
 
 public enum ColumnConstraint {
