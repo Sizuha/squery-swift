@@ -11,6 +11,7 @@ import SQLite3
 
 fileprivate let stdCalendar = Calendar(identifier: .gregorian)
 
+// MARK: Sql Nil
 public class SqlNil: NSObject {
 	public override var description: String {
 		return "sqlNil"
@@ -23,6 +24,33 @@ public class SqlNil: NSObject {
 	public override func isEqual(_ object: Any?) -> Bool { object is SqlNil }
 }
 public let sqlNil = SqlNil()
+
+// MARK: Sql Vlaue
+public enum SqlValue {
+	case integer(_ value: Int)
+	case real(_value: Double)
+	case text(_ value: String)
+	case currentTime
+	case currentDate
+	case currentTimeStamp
+	case null
+	case raw(_ text: String)
+	
+	func toSqlString() -> String {
+		switch self {
+		case .integer(let value): return "\(value)"
+		case .real(let value): return "\(value)"
+		case .text(let value): return "'\(value)'"
+		case .currentTime: return "CURRENT_TIME"
+		case .currentDate: return "CURRENT_DATE"
+		case .currentTimeStamp: return "CURRENT_TIMESTAMP"
+		case .null: return "NULL"
+		case .raw(let text): return text
+			
+		default: return ""
+		}
+	}
+}
 
 public protocol SQueryRow {
 	func load(from cursor: SQLiteCursor)
@@ -877,7 +905,17 @@ public enum ColumnScheme {
 		_ name: String,
 		type: SQLiteColumnType,
 		notNull: Bool = false,
-		unique: Bool = false)
+		unique: Bool = false,
+		default: SqlValue? = nil)
+}
+
+public enum ColumnConstraint {
+	case primaryKey(desc: Bool = false)
+	case autoInc
+	case notNull
+	case unique
+	case check(_ expr: String)
+	case `default`(_ val: SqlValue)
 }
 
 public class TableCreator {
@@ -894,8 +932,12 @@ public class TableCreator {
 		var type: SQLiteColumnType = .none
 		var autoInc = false
 		var pk = false
+		var pk_desc = false
 		var notNull = false
 		var unique = false
+		var check: String? = nil
+		
+		var defaultValue: SqlValue? = nil
 	}
 	
 	private var columns = [ColumnDefine]()
@@ -910,20 +952,15 @@ public class TableCreator {
 		
 		for s in scheme.columnSchemes {
 			switch s {
-			case .key(
-				let name,
-				autoInc: let autoInc,
-				type: let type,
-				notNull: let notNull,
-				unique: let unique):
+			case .key(let name, let autoInc, let type, let notNull, let unique):
 				if autoInc {
 					_ = addAutoInc(name, notNull: true, unique: false)
 				}
 				else {
 					_ = addPrimaryKey(name, type: type, notNull: notNull, unique: unique)
 				}
-			case .column(let name, type: let type, notNull: let notNull, unique: let unique):
-				_ = addColumn(name, type: type, notNull: notNull, unique: unique)
+			case .column(let name, let type, let notNull, let unique, let defVal):
+				_ = addColumn(name, type: type, notNull: notNull, unique: unique, default: defVal)
 			}
 		}
 	}
@@ -933,32 +970,84 @@ public class TableCreator {
 		colDef.type = .integer
 		colDef.autoInc = true
 		colDef.pk = true
+		colDef.pk_desc = false
 		colDef.unique = notNull
 		colDef.notNull = unique
 		columns.append(colDef)
 		return self
 	}
 	
-	public func addPrimaryKey(_ name: String, type: SQLiteColumnType, notNull: Bool = false, unique: Bool = false) -> Self {
+	public func addPrimaryKey(
+		_ name: String,
+		type: SQLiteColumnType,
+		desc: Bool = false,
+		notNull: Bool = false,
+		unique: Bool = false)
+		-> Self
+	{
 		let colDef = ColumnDefine(name)
 		colDef.type = type
 		colDef.pk = true
+		colDef.pk_desc = desc
 		colDef.unique = unique
 		colDef.notNull = notNull
 		columns.append(colDef)
 		return self
 	}
 	
-	public func addColumn(_ name: String, type: SQLiteColumnType, notNull: Bool = false, unique: Bool = false) -> Self {
+	public func addColumn(
+		_ name: String,
+		type: SQLiteColumnType,
+		notNull: Bool = false,
+		unique: Bool = false,
+		default defaultVal: SqlValue? = nil)
+		-> Self
+	{
 		let colDef = ColumnDefine(name)
 		colDef.type = type
 		colDef.notNull = notNull
 		colDef.unique = unique
+		colDef.defaultValue = defaultVal
 		columns.append(colDef)
 		return self
 	}
 	
-	public func create(ifNotExists: Bool = true) -> SQLiteError? {
+	public func addColumn(
+		_ name: String,
+		type: SQLiteColumnType,
+		constraint: [ColumnConstraint] = [])
+		-> Self
+	{
+		let colDef = ColumnDefine(name)
+		colDef.type = type
+	
+		for def in constraint {
+			switch def {
+			case .primaryKey(let desc):
+				colDef.pk = true
+				colDef.pk_desc = desc
+				
+			case .autoInc:
+				colDef.autoInc = true
+				colDef.pk = true
+				
+			case .notNull:
+				colDef.notNull = true
+				
+			case .unique:
+				colDef.unique = true
+									
+			case .check(let expr):
+				colDef.check = expr
+				
+			case .`default`(let val):
+				colDef.defaultValue = val
+			}
+		}
+		return self
+	}
+
+	public func createSql(ifNotExists: Bool = true) -> String {
 		var sql = "CREATE TABLE "
 		if (ifNotExists) {
 			sql.append("IF NOT EXISTS ")
@@ -989,15 +1078,29 @@ public class TableCreator {
 				sql.append(" NOT NULL")
 			}
 			
-			if col.autoInc || col.pk && isSinglePk {
-				sql.append(" PRIMARY KEY")
-				if col.autoInc {
-					sql.append(" AUTOINCREMENT")
+			if col.unique {
+				sql.append(" UNIQUE")
+			}
+			
+			if let check = col.check {
+				if !check.isEmpty {
+					sql.append(" CHECK (\(check))")
 				}
 			}
 			
-			if col.unique {
-				sql.append(" UNIQUE")
+			if let defaultVal = col.defaultValue {
+				sql.append(" DEFAULT \(defaultVal.toSqlString())")
+			}
+			
+			if col.autoInc || col.pk && isSinglePk {
+				sql.append(" PRIMARY KEY")
+				if col.pk_desc {
+					sql.append(" DESC")
+				}
+				
+				if col.autoInc {
+					sql.append(" AUTOINCREMENT")
+				}
 			}
 		}
 		
@@ -1012,6 +1115,11 @@ public class TableCreator {
 		}
 		
 		sql.append(");")
+		return sql
+	}
+	
+	public func create(ifNotExists: Bool = true) -> SQLiteError? {
+		let sql = createSql(ifNotExists: ifNotExists)
 		return db.execute(sql: sql)
 	}
 	
