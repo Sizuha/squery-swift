@@ -907,6 +907,10 @@ public enum ColumnScheme {
 		notNull: Bool = false,
 		unique: Bool = false,
 		default: SqlValue? = nil)
+	case def(
+		_ name: String,
+		type: SQLiteColumnType,
+		_ constraint: [ColumnConstraint])
 }
 
 public enum ColumnConstraint {
@@ -961,6 +965,9 @@ public class TableCreator {
 				}
 			case .column(let name, let type, let notNull, let unique, let defVal):
 				_ = addColumn(name, type: type, notNull: notNull, unique: unique, default: defVal)
+			case .def(let name, let type, let constraint):
+				_ = addColumn(name, type: type, constraint: constraint)
+				break
 			}
 		}
 	}
