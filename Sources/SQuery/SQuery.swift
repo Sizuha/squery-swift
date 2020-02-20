@@ -1676,7 +1676,7 @@ public class TableQuery {
 		// GROUP BY [HAVING]
 		if !sqlGroupByCols.isEmpty {
 			sql.append(" GROUP BY ")
-			var first = false
+			var first = true
 			for col in sqlGroupByCols {
 				if first { first = false } else {
 					sql.append(",")
