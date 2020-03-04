@@ -1661,7 +1661,6 @@ public class TableQuery {
 				if first { first = false } else {
 					sql.append(",")
 				}
-				//sql.append("`\(t)`")
 				sql.append(t)
 			}
 			
