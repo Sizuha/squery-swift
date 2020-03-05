@@ -3,11 +3,18 @@ Simple SQLite Query Library for Swift (iOS)
 
 まだ開発中です。 Now Developing...
 
-## 準備
+# Install
 1. **Linked Frameworks and Libraries**に「libsqlite3.tbd」を追加します
-1. 必要なソースは**SQuery.swift**だけです（frameworkを追加したくない場合は**SQuery.swift**だけをコピー）
 
-## DBのOpenとClose
+## Swift Package Manager
+Go to Project -> Swift Packages and add the repository:
+```
+https://github.com/Sizuha/SizUtil-iOS
+```
+## 手動
+必要なソースは**SQuery.swift**だけです（frameworkを追加したくない場合は**SQuery.swift**だけをコピー）
+
+# DBのOpenとClose
 ```swift
 // Open
 let dbConn = SQuery(at: "db_file_path").open()
@@ -23,7 +30,7 @@ defer { dbConn?.close() }
 
 Pathを省略すると、基本的にアプリの**Document**から操作を行う。ファイルが存在しない場合は、ファイルを作成する。 これは基本動作で、`SQuery(at: "db_file_path", mode: .readWrite)`のようにmodeを指定して変更できる。
 
-## Create Table
+# Create Table
 ```swift
 let db = SQuery(at: "some.db")
 defer { db.close() }
@@ -41,7 +48,7 @@ let error = db.createTable(TableScheme(name: "TableName", columns: [
 ]), ifNotExists: true)
 ```
 
-## Drop Table
+# Drop Table
 ```swift
 if let table = SQuery(at: "some.db").from("TableName") {
 	defer { table.close() }
@@ -49,7 +56,7 @@ if let table = SQuery(at: "some.db").from("TableName") {
 }
 ```
 
-## Select
+# Select
 ```swift
 // SELECT * FROM account WHERE joinDate >= '2018-01-01 00:00:00' ORDER BY joinDate, age DESC;
 if let table = SQuery(at: "user.db").from("account") {
@@ -66,7 +73,7 @@ if let table = SQuery(at: "user.db").from("account") {
 
 他にも `gorupBy()`,`limit()`,`distnict()`などが使える。
 
-### whereAnd
+## whereAnd
 where句の場合、ANDで条件を繋ぐ事がよくある。その時に`whereAnd()`を使えば便利。
 ```swift
 // SELECT * FROM account WHERE (joinDate >= '2018-01-01 00:00:00') AND (age >= 18);
@@ -81,8 +88,8 @@ if let table = SQuery(at: "user.db").from("account") {
 }
 ```
 
-### SQLiteCursor
-#### Cursorオブジェクトからデータを習得する方法
+## SQLiteCursor
+### Cursorオブジェクトからデータを習得する方法
 ```swift
 if let tblAcc = SQuery(at:"user.db").from("account") {
 	defer { tblAcc.close() }
@@ -115,7 +122,7 @@ let result: [[String:Any?]] = cursor.toDictionaryAll(closeCursor: true)
 ```
 
 
-#### CursorからData Objectを作成
+### CursorからData Objectを作成
 先ずは、Data classに**SQueryRow** protocolを具現する。
 ```swift
 class Account: SQueryRow {
@@ -198,7 +205,7 @@ if let table = SQuery(at: "user.db").from(Account.tableName) {
 ```
 
 
-## Insert
+# Insert
 ```swift
 if let table = SQuery(at: "user.db").from(Account.tableName) {
 	defer { table.close() }
@@ -209,7 +216,7 @@ if let table = SQuery(at: "user.db").from(Account.tableName) {
 }
 ```
 
-### Auto Incrementのcolumnの例外処理
+## Auto Incrementのcolumnの例外処理
 Auto Incrementで宣言されたcolumnはINSERTで直接データをセットできない。この場合、下記の様に除外するcolumnを指定できる。
 ```swift
 if let table = SQuery(at: "some.db").from("TableName") {
@@ -226,7 +233,7 @@ if let table = SQuery(at: "some.db").from("TableName") {
 }
 ```
 
-## Update
+# Update
 ```swift
 // UPDATE account WHERE id='xxx' SET name='TESTER', ...;
 if let table = SQuery(at: "user.db").from(Account.tableName) {
@@ -257,7 +264,7 @@ if let table = SQuery(at: "user.db").from(Account.tableName) {
 }
 ```
 
-## Insert or Update
+# Insert or Update
 先にINSERTを試して失敗する場合、UPDATEを実行する。
 つまり新規のデータを登録する時、既に存在する場合は入れ替える。
 ```swift
@@ -276,7 +283,7 @@ if let table = SQuery(at: "user.db").from(Account.tableName) {
 }
 ```
 
-## Delete
+# Delete
 ```swift
 if let table = SQuery(at: "user.db").from(Account.tableName) {
 	defer { table.close() }
@@ -285,7 +292,7 @@ if let table = SQuery(at: "user.db").from(Account.tableName) {
 }
 ```
 
-## nilの扱いに注意！！
+# nilの扱いに注意！！
 SwiftのDictionaryは、「nil」値が収納できない！
 ```swift
 var sample = [String:Any?]()
