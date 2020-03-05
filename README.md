@@ -4,7 +4,7 @@ Simple SQLite Query Library for Swift (iOS)
 まだ開発中です。 Now Developing...
 
 # Install
-1. **Linked Frameworks and Libraries**に「libsqlite3.tbd」を追加します
+**Linked Frameworks and Libraries**に「libsqlite3.tbd」を追加
 
 ## Swift Package Manager
 Go to Project -> Swift Packages and add the repository:
