@@ -9,7 +9,7 @@ Simple SQLite Query Library for Swift (iOS)
 ## Swift Package Manager
 Go to Project -> Swift Packages and add the repository:
 ```
-https://github.com/Sizuha/SizUtil-iOS
+https://github.com/Sizuha/squery-swift
 ```
 ## 手動
 必要なソースは**SQuery.swift**だけです（frameworkを追加したくない場合は**SQuery.swift**だけをコピー）
