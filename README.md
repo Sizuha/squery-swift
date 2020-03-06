@@ -204,6 +204,49 @@ if let table = SQuery(at: "user.db").from(Account.tableName) {
 }
 ```
 
+#### SQueryRowEx
+SQueryRowEx Protocolを使うと、Tableの定義も一緒にData Classの中でできる。
+```swift
+class Account: SQueryRowEx {
+	static let tableScheme = TableScheme(name: "account", columns: [
+		.key(F_ID, type: .text, notNull: true),
+		.column(F_NAME, type: .text, notNull: true),
+		.column(F_AGE, type: .integer, notNull: true),
+		.column(F_JOIN, type: .text, notNull: true),
+	])
+
+	static let F_ID = "id"
+	static let F_NAME = "name"
+	static let F_AGE = "age"
+	static let F_JOIN = "joinDate"
+
+	var id = ""
+	var name = ""
+	var age = 0
+	var joinDate: Date? = nil	
+	private val dateFmt = SQuery.newDateTimeFormat
+
+	func load(from cursor: SQLiteCursor) {
+		// 省略
+	}
+
+	func toValues() -> [String:Any?] {
+		// 省略
+	}
+}
+
+
+// それと、Table名の代わりに、Class名.selfを使うことができる
+
+// Create Table
+if let db = SQuery(at: db) {
+	defer { db.close() }
+	db.create(tables: [Account.class])
+}
+
+// Select Table (FROM)
+guard let table = SQuery(at: db)?.from(Account.class) else { fatalError() }
+```
 
 # Insert
 ```swift
