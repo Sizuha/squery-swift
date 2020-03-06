@@ -236,7 +236,7 @@ class Account: SQueryRowEx {
 }
 
 
-// それと、Table名の代わりに、Class名.selfを使うことができる
+// それと、Table名の代わりに、Class名.classを使うことができる
 
 // Create Table
 if let db = SQuery(at: db) {
