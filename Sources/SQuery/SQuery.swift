@@ -1407,14 +1407,14 @@ public class TableQuery {
 	///   - args: 条件の中の「?」に対応するパラメータ達
 	/// - Returns: 自分のinstance
 	public func setWhere(_ whereText: String, _ args: Any?...) -> Self {
-		return setWhere(whereText, args: args)
+        return set(where: whereText, args: args)
 	}
 	/// 参照
 	/// ---
 	/// ```
 	/// func setWhere(_ whereText: String, args: Any?...) -> Self
 	/// ```
-	public func setWhere(_ whereText: String, args: [Any?]) -> Self {
+	public func set(where whereText: String, args: [Any?]) -> Self {
 		sqlWhereArgs.removeAll()
 		
 		sqlWhere = "(\(whereText))"
@@ -1451,14 +1451,14 @@ public class TableQuery {
 	///   - args: 条件の中の「?」に対応するパラメータ達
 	/// - Returns: 自分のinstance
 	public func whereAnd(_ whereText: String, _ args: Any?...) -> Self {
-		return whereAnd(whereText, args: args)
+        return and(where: whereText, args: args)
 	}
 	/// 参照
 	/// ---
 	/// ```
 	/// func whereAnd(_ whereText: String, args: Any?...) -> Self
 	/// ```
-	public func whereAnd(_ whereText: String, args: [Any?]) -> Self {
+	public func and(where whereText: String, args: [Any?]) -> Self {
 		if sqlWhere.isEmpty {
 			sqlWhere = "(\(whereText))"
 		}

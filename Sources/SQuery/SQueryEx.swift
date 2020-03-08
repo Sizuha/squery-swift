@@ -30,12 +30,3 @@ public extension SQuery {
 		}
 	}
 }
-
-public extension TableQuery {
-	func and(_ whereText: String, args: [Any?]) -> Self {
-		return whereAnd(whereText, args)
-	}
-	func and(_ whereText: String, _ args: Any?...) -> Self {
-		return whereAnd(whereText, args: args)
-	}
-}
