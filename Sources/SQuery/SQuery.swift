@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.4.2
+//  - Version: 1.4.5
 //  - Require Library: libsqlite3.tbd
 //
 
@@ -1414,7 +1414,7 @@ public class TableQuery {
 	/// ```
 	/// func setWhere(_ whereText: String, args: Any?...) -> Self
 	/// ```
-	public func set(where whereText: String, args: [Any?]) -> Self {
+	public func set(where whereText: String, args: [Any?] = []) -> Self {
 		sqlWhereArgs.removeAll()
 		
 		sqlWhere = "(\(whereText))"
@@ -1450,15 +1450,15 @@ public class TableQuery {
 	///   - whereText: 追加する条件
 	///   - args: 条件の中の「?」に対応するパラメータ達
 	/// - Returns: 自分のinstance
-	public func whereAnd(_ whereText: String, _ args: Any?...) -> Self {
+	public func andWhere(_ whereText: String, _ args: Any?...) -> Self {
         return and(where: whereText, args: args)
 	}
 	/// 参照
 	/// ---
 	/// ```
-	/// func whereAnd(_ whereText: String, args: Any?...) -> Self
+	/// func andWhere(_ whereText: String, args: Any?...) -> Self
 	/// ```
-	public func and(where whereText: String, args: [Any?]) -> Self {
+	public func and(where whereText: String, args: [Any?] = []) -> Self {
 		if sqlWhere.isEmpty {
 			sqlWhere = "(\(whereText))"
 		}
