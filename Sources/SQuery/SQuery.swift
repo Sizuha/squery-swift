@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.4.5
+//  - Version: 1.4.6
 //  - Require Library: libsqlite3.tbd
 //
 
@@ -1840,7 +1840,7 @@ public class TableQuery {
 			for key in sqlKeyColumns {
 				if let _ = values.index(forKey: key) {
 					let value = values[key]
-					let _ = whereAnd("`\(key)`=?", value ?? nil)
+					let _ = andWhere("`\(key)`=?", value ?? nil)
 				}
 			}
 		}
