@@ -1051,6 +1051,8 @@ public class TableCreator {
 				colDef.defaultValue = val
 			}
 		}
+		
+		columns.append(colDef)
 		return self
 	}
 
