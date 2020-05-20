@@ -2,7 +2,7 @@
 //  SQueryEx.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.3
+//  - Version: 1.4.8
 //  - Require Library: libsqlite3.tbd
 //
 
@@ -21,7 +21,11 @@ public extension SQLiteCursor {
 
 public extension SQuery {
 	func from(_ tableClass: SQueryRowEx.Type) -> TableQuery? {
-		return self.from(tableClass.tableScheme.tableName)
+        let scheme = tableClass.tableScheme
+        guard let table = self.from(scheme.tableName) else { return nil }
+        
+        _ = table.keys(columns: scheme.getKeys())
+        return table
 	}
 	
 	func create(tables: [SQueryRowEx.Type]) {

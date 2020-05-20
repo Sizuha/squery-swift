@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.4.6
+//  - Version: 1.4.8
 //  - Require Library: libsqlite3.tbd
 //
 
@@ -892,6 +892,10 @@ public class TableScheme {
 		self.tableName = name
 		self.columnSchemes = columns
 	}
+    
+    public func getKeys() -> [String] {
+        self.columnSchemes.filter({ $0.isKey }).map { $0.name }
+    }
 }
 
 public enum ColumnScheme {
@@ -911,6 +915,33 @@ public enum ColumnScheme {
 		_ name: String,
 		type: SQLiteColumnType,
 		_ constraint: [ColumnConstraint] = [])
+    
+    var isKey: Bool {
+        switch self {
+        case .key( _, _, _, _, _): return true
+        case .column(_, _, _, _, _): return false
+        case .def(_, _, let constraint):
+            return constraint.contains {
+                switch $0 {
+                case .primaryKey(desc: _): return true
+                default: return false
+                }
+            }
+        default: break
+        }
+        return false
+    }
+    
+    var name: String {
+        switch self {
+        case .key(let name, _, _, _, _): return name
+        case .column(let name, _, _, _, _): return name
+        case .def(let name, _, _): return name
+        default: break
+        }
+        
+        fatalError()
+    }
 }
 
 public enum ColumnConstraint {
@@ -967,7 +998,6 @@ public class TableCreator {
 				_ = addColumn(name, type: type, notNull: notNull, unique: unique, default: defVal)
 			case .def(let name, let type, let constraint):
 				_ = addColumn(name, type: type, constraint: constraint)
-				break
 			}
 		}
 	}
