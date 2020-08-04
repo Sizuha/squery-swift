@@ -3,7 +3,6 @@
 //  Simple SQLite Query Library for Swift
 //
 //  - Version: 1.4.8
-//  - Require Library: libsqlite3.tbd
 //
 
 import Foundation
@@ -708,14 +707,15 @@ public class SQuery {
 	private var dbConn: SQLiteConnection? = nil
 	
 	public convenience init?(url: URL, mode: SQLiteOpenMode = .readWriteCreate) {
-		do {
-			let filepath = try String(contentsOf: url)
-			self.init(at: filepath, mode: mode)
-		}
-		catch {
-			return nil
-		}
-	}
+        let filepath = url.path
+        if mode != .readWriteCreate {
+            guard FileManager.default.fileExists(atPath: filepath) else {
+                return nil
+            }
+        }
+        
+        self.init(at: filepath, mode: mode)
+    }
 
 	/// SQLite DBファイルをOpen又は作成する
 	///
@@ -766,7 +766,7 @@ public class SQuery {
 			dataSource.append("rwc")
 		}
 		
-		printLog("[SQuery] data source: \(dataSource)")
+		print("[SQuery] data source: \(dataSource)")
 	}
 	
 	/// DBファイルを開く

@@ -3,7 +3,6 @@
 //  Simple SQLite Query Library for Swift
 //
 //  - Version: 1.4.8
-//  - Require Library: libsqlite3.tbd
 //
 
 import Foundation
