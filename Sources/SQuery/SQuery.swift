@@ -1927,10 +1927,36 @@ public class TableQuery {
 
 	//MARK: INSERT or UPDATE
 	public func insertOrUpdate(exceptInsert cols: [String] = []) -> Bool {
-		return insert(except: cols).isSuccess || update().rowCount > 0
-	}
+        let res_insert = insert(except: cols)
+        if let error = res_insert.error {
+            printLog(error.localizedDescription)
+        }
+        
+        if res_insert.isSuccess {
+            return true
+        }
+
+        let res_update = update()
+        if let error = res_update.error {
+            printLog(error.localizedDescription)
+        }
+        return res_update.rowCount > 0
+    }
 	
 	public func updateOrInsert(exceptInsert cols: [String] = []) -> Bool {
-		return update().rowCount > 0 || insert(except: cols).isSuccess
+        let res_update = update()
+        if let error = res_update.error {
+            printLog(error.localizedDescription)
+        }
+        
+        if res_update.rowCount > 0 {
+            return true
+        }
+        
+        let res_insert = insert(except: cols)
+        if let error = res_insert.error {
+            printLog(error.localizedDescription)
+        }
+        return res_insert.isSuccess
 	}
 }
