@@ -438,6 +438,7 @@ public class SQLiteCursor {
 		guard isSuccess else { return }
 		
 		columnCountRaw = sqlite3_column_count(stmt)
+        columnNameMap.reserveCapacity(Int(columnCountRaw));
 		
 		for i in 0..<columnCountRaw {
 			let colName = getColumnNameRaw(i)
