@@ -2,7 +2,7 @@
 //  SQueryEx.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.4.8
+//  - Version: 1.5.9
 //
 
 import Foundation

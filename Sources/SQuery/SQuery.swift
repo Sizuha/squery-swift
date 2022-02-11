@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.4.8
+//  - Version: 1.5.9
 //
 
 import Foundation
@@ -314,7 +314,7 @@ public class SQLiteConnection {
 		return execute(sql: "PRAGMA user_version=\(ver);") == nil
 	}
 
-	//--- TRANSACTION ---
+	// MARK: - TRANSACTION
 	// cf. https://www.sqlite.org/lang_transaction.html
 	public func beginTransaction(_ mode: SQLiteTransactionMode = .deferred) -> Bool {
 		var modeStr = ""
@@ -1381,6 +1381,7 @@ public class TableQuery {
 		return self
 	}
 	
+    // MARK: DISTNIC
 	/// SELECT時に、重複したrow(行)は除外する設定
 	///
 	/// SQLの「SELECT DISTNIC」機能
@@ -1393,6 +1394,7 @@ public class TableQuery {
 		return self
 	}
 	
+    // MARK: JOIN
 	public func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> Self {
 		return join(type: joinType, tables: tables, on: joinOn, args: args)
 	}
@@ -1418,6 +1420,7 @@ public class TableQuery {
 		return self
 	}
 
+    // MARK: WHERE
 	/// WHERE句を作成する
 	///
 	/// 検索条件を指定する。
@@ -1506,6 +1509,7 @@ public class TableQuery {
 		return self
 	}
 	
+    // MARK: ORDER BY
 	/// ORDER BY句に並べ条件を追加する
 	///
 	/// 結果をソートする
@@ -1552,6 +1556,7 @@ public class TableQuery {
 		return self
 	}
 	
+    // MARK: GROUP BY
 	/// HAVING条件なしのGROUP BY句を作成する
 	/// 参照
 	/// ---
@@ -1592,6 +1597,7 @@ public class TableQuery {
 		return self
 	}
 
+    // MARK: LIMIT
 	/// LIMIT区を作成する
 	///
 	/// 結果として返されるrow(行)数を制限する
@@ -1613,6 +1619,7 @@ public class TableQuery {
 		return self
 	}
 	
+    // MARK: COLUMNS
 	/// 参照
 	/// ---
 	/// ```
@@ -1631,6 +1638,7 @@ public class TableQuery {
 		return self
 	}
 	
+    // MARK: KEYS
 	/// Tableのキー(key)のcolumnを指定する
 	///
 	/// `update()`時、キーのcolumnは修正内容から自動で外される
@@ -1851,17 +1859,29 @@ public class TableQuery {
 	}
 	
 	//MARK: UPDATE
-	public func update(autoMakeWhere: Bool = true) -> UpdateQueryResult {
-		return update(set: sqlValues, autoMakeWhere: autoMakeWhere)
+	public func update(autoMakeWhere: Bool = true, keyIsNotChanged: Bool = false) -> UpdateQueryResult {
+		update(set: sqlValues, autoMakeWhere: autoMakeWhere, keyIsNotChanged: keyIsNotChanged)
 	}
-	public func update(set values: SQueryRow, autoMakeWhere: Bool = true) -> UpdateQueryResult {
-		return update(set: values.toValues(), autoMakeWhere: autoMakeWhere)
+	public func update(
+        set values: SQueryRow,
+        autoMakeWhere: Bool = true,
+        keyIsNotChanged: Bool = false
+    ) -> UpdateQueryResult {
+		update(set: values.toValues(), autoMakeWhere: autoMakeWhere, keyIsNotChanged: keyIsNotChanged)
 	}
-	public func update(set values: [String:Any?], autoMakeWhere: Bool = true) -> UpdateQueryResult {
+	public func update(
+        set values: [String:Any?],
+        autoMakeWhere: Bool = true,
+        keyIsNotChanged: Bool = false
+    ) -> UpdateQueryResult {
 		var sql = "UPDATE \(tableName) SET "
 		var args = [Any?]()
 		var first = true
 		for (colName, value) in values {
+            guard !(keyIsNotChanged && sqlKeyColumns.contains(colName)) else {
+                continue
+            }
+            
 			if first { first = false } else {
 				sql.append(",")
 			}
@@ -1927,7 +1947,7 @@ public class TableQuery {
 	}
 
 	//MARK: INSERT or UPDATE
-	public func insertOrUpdate(exceptInsert cols: [String] = []) -> Bool {
+	public func insertOrUpdate(keyIsNotChanged: Bool = false, exceptInsert cols: [String] = []) -> Bool {
         let res_insert = insert(except: cols)
         if let error = res_insert.error {
             printLog(error.localizedDescription)
@@ -1937,15 +1957,15 @@ public class TableQuery {
             return true
         }
 
-        let res_update = update()
+        let res_update = update(keyIsNotChanged: keyIsNotChanged)
         if let error = res_update.error {
             printLog(error.localizedDescription)
         }
         return res_update.rowCount > 0
     }
 	
-	public func updateOrInsert(exceptInsert cols: [String] = []) -> Bool {
-        let res_update = update()
+	public func updateOrInsert(keyIsNotChanged: Bool = false, exceptInsert cols: [String] = []) -> Bool {
+        let res_update = update(keyIsNotChanged: keyIsNotChanged)
         if let error = res_update.error {
             printLog(error.localizedDescription)
         }
