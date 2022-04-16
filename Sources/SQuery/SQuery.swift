@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.5.9
+//  - Version: 1.5.10
 //
 
 import Foundation
@@ -1297,7 +1297,8 @@ public class TableQuery {
 	
 	private let tableName: String
 	
-	private var sqlDistnict = false
+    // DISTINCT
+	private var sqlDistinct = false
 	
 	private var sqlJoin = ""
 	private var sqlJoinTables = [String]()
@@ -1357,7 +1358,7 @@ public class TableQuery {
 	/// クエリを一度実行してから、また別の設定でクエリを実行すためには一度`reset()`する事をおすすめする。
 	/// - Returns: 自分のinstance
 	public func reset() -> Self {
-		sqlDistnict = false
+		sqlDistinct = false
 		
 		sqlJoin = ""
 		sqlJoinTables.removeAll()
@@ -1381,16 +1382,16 @@ public class TableQuery {
 		return self
 	}
 	
-    // MARK: DISTNIC
+    // MARK: DISTINCT
 	/// SELECT時に、重複したrow(行)は除外する設定
 	///
-	/// SQLの「SELECT DISTNIC」機能
+	/// SQLの「SELECT DISTINCT」機能
 	/// - Parameter flag:
 	///   1) true = 重複したrow(行)を除外する
 	///   2) false = 重複したrow(行)も残す
 	/// - Returns: 自分のinstance
-	public func distnict(_ flag: Bool = true) -> Self {
-		sqlDistnict = flag
+	public func distinct(_ flag: Bool = true) -> Self {
+		sqlDistinct = flag
 		return self
 	}
 	
@@ -1670,8 +1671,8 @@ public class TableQuery {
 	private func makeQuerySql(forCount: Bool = false) -> String {
 		// SELECT
 		var sql = "SELECT "
-		if sqlDistnict {
-			sql.append("DISTNICT ")
+		if sqlDistinct {
+			sql.append("DISTINCT ")
 		}
 		
 		if forCount {
@@ -1747,7 +1748,7 @@ public class TableQuery {
 	///
 	/// 参照
 	/// ---
-	/// - distnict()
+	/// - distinct()
 	/// - columns()
 	/// - join()
 	/// - setWhere(), whereAnd()
