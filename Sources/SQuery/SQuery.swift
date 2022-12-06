@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.5.10
+//  - Version: 1.5.11
 //
 
 import Foundation
@@ -95,35 +95,26 @@ public class SQLiteError: Error {
 	}
 }
 
-public class UpdateQueryResult {
-	public var rowCount: Int = 0
-	public var error: SQLiteError? = nil
+public struct UpdateQueryResult {
+	public let rowCount: Int
+	public let error: SQLiteError?
 	public var isSuccess: Bool {
 		get { return error == nil }
 	}
 }
 
-private let SQLITE_TRANSIENT = unsafeBitCast(OpaquePointer(bitPattern: -1), to: sqlite3_destructor_type.self)
+fileprivate let SQLITE_TRANSIENT = unsafeBitCast(OpaquePointer(bitPattern: -1), to: sqlite3_destructor_type.self)
 
-private var enableDebugMode = true
+fileprivate var enableDebugMode = true
+
+/// デバッグ用のログを出力するか、しないかを設定
 public func setEnableSQueryDebug(_ flag: Bool = true) {
 	enableDebugMode = flag
 }
 
-private func printLog(_ text: String, _ args: CVarArg...) {
-	if enableDebugMode {
-		NSLog("[SQuery] \(text)", args)
-	}
-}
-
-extension Error {
-	func toSqliteError() -> SQLiteError {
-		if let sqlErr = self as? SQLiteError {
-			return sqlErr
-		}
-		
-		return SQLiteError(code: SQLITE_ERROR, message: self.localizedDescription)
-	}
+fileprivate func printLog(_ text: String, _ args: CVarArg...) {
+    guard enableDebugMode else { return }
+    print("[SQuery] \(text)", args)
 }
 
 //MARK: - SQLiteConnection
@@ -1842,14 +1833,10 @@ public class TableQuery {
 		
 		sql.append("(\(cols)) VALUES (\(vals));")
 		
-		let result = UpdateQueryResult()
 		if let error = db.execute(sql: sql, args: args) {
-			result.error = error
+            return UpdateQueryResult(rowCount: 0, error: error)
 		}
-		else {
-			result.rowCount = 1
-		}
-		return result
+		return UpdateQueryResult(rowCount: 1, error: nil)
 	}
 	
 	//MARK: UPDATE
@@ -1907,14 +1894,11 @@ public class TableQuery {
 		
 		sql.append(";")
 		
-		let result = UpdateQueryResult()
 		if let error = db.execute(sql: sql, args: args) {
-			result.error = error
+            return UpdateQueryResult(rowCount: 0, error: error)
 		}
-		else {
-			result.rowCount = db.getLastChangedRowCount()
-		}
-		return result
+        let rowCount = db.getLastChangedRowCount()
+		return UpdateQueryResult(rowCount: rowCount, error: nil)
 	}
 	
 	//MARK: DELETE
@@ -1925,14 +1909,11 @@ public class TableQuery {
 		}
 		sql.append(";")
 		
-		let result = UpdateQueryResult()
 		if let error = db.execute(sql: sql, args: sqlWhereArgs) {
-			result.error = error
+            return UpdateQueryResult(rowCount: 0, error: error)
 		}
-		else {
-			result.rowCount = db.getLastChangedRowCount()
-		}
-		return result
+        let rowCount = db.getLastChangedRowCount()
+        return UpdateQueryResult(rowCount: rowCount, error: nil)
 	}
 	
 	//MARK: DROP
