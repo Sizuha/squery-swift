@@ -45,8 +45,6 @@ public enum SqlValue {
 		case .currentTimeStamp: return "CURRENT_TIMESTAMP"
 		case .null: return "NULL"
 		case .raw(let text): return text
-			
-		default: return ""
 		}
 	}
 }
@@ -928,9 +926,7 @@ public enum ColumnScheme {
                 default: return false
                 }
             }
-        default: break
         }
-        return false
     }
     
     var name: String {
@@ -938,10 +934,7 @@ public enum ColumnScheme {
         case .key(let name, _, _, _, _): return name
         case .column(let name, _, _, _, _): return name
         case .def(let name, _, _): return name
-        default: break
         }
-        
-        fatalError()
     }
 }
 
@@ -1981,4 +1974,34 @@ public class TableQuery {
         }
         return res_insert.isSuccess
 	}
+}
+
+
+// MARK: - Extension
+
+public protocol SQueryRowEx: SQueryRow {
+    static var tableScheme: TableScheme { get }
+}
+
+public extension SQLiteCursor {
+    func getDate(_ colIdx: Int, format: DateFormatter) -> Date? {
+        guard let raw = getString(colIdx) else { return nil }
+        return format.date(from: raw)
+    }
+}
+
+public extension SQuery {
+    func from(_ tableClass: SQueryRowEx.Type) -> TableQuery? {
+        let scheme = tableClass.tableScheme
+        guard let table = self.from(scheme.tableName) else { return nil }
+        
+        _ = table.keys(columns: scheme.getKeys())
+        return table
+    }
+    
+    func create(tables: [SQueryRowEx.Type]) {
+        for table in tables {
+            _ = createTable(table.tableScheme)
+        }
+    }
 }
