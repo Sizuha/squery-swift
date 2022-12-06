@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.5.11
+//  - Version: 1.6.0
 //
 
 import Foundation
@@ -95,14 +95,6 @@ public class SQLiteError: Error {
 	}
 }
 
-public struct UpdateQueryResult {
-	public let rowCount: Int
-	public let error: SQLiteError?
-	public var isSuccess: Bool {
-		get { return error == nil }
-	}
-}
-
 fileprivate let SQLITE_TRANSIENT = unsafeBitCast(OpaquePointer(bitPattern: -1), to: sqlite3_destructor_type.self)
 
 fileprivate var enableDebugMode = true
@@ -115,6 +107,38 @@ public func setEnableSQueryDebug(_ flag: Bool = true) {
 fileprivate func printLog(_ text: String, _ args: CVarArg...) {
     guard enableDebugMode else { return }
     print("[SQuery] \(text)", args)
+}
+
+// MARK: - QueryResult
+
+public class QueryResult {
+    public let error: SQLiteError?
+    public var isSuccess: Bool {
+        get { return error == nil }
+    }
+
+    public init(error: SQLiteError? = nil) {
+        self.error = error
+    }
+}
+
+public class UpdateQueryResult: QueryResult {
+    public let rowCount: Int
+    
+    public init(rowCount: Int, error: SQLiteError? = nil) {
+        self.rowCount = rowCount
+        super.init(error: error)
+    }
+}
+
+public class SelectQueryResult<T: SQueryRow>: QueryResult {
+    public let rows: [T]
+    public var row: T? { rows.first }
+    
+    public init(rows: [T], error: SQLiteError? = nil) {
+        self.rows = rows
+        super.init(error: error)
+    }
 }
 
 //MARK: - SQLiteConnection
@@ -1775,15 +1799,14 @@ public class TableQuery {
 		return cursor.error
 	}
 
-	public func select<T: SQueryRow>(factory: ()->T) -> ([T], SQLiteError?) {
+	public func select<T: SQueryRow>(factory: ()->T) -> SelectQueryResult<T> {
 		var rows = [T]()
-		let error = select(factory: factory) { row in rows.append(row) }
-		return (rows, error);
+		let error = select(factory: factory) { rows.append($0) }
+        return SelectQueryResult(rows: rows, error: error)
 	}
 	
-	public func selectOne<T: SQueryRow>(factory: ()->T) -> (T?, SQLiteError?) {
-		let (rows, error) = limit(1).select(factory: factory)
-		return (rows.first, error)
+	public func selectOne<T: SQueryRow>(factory: ()->T) -> SelectQueryResult<T> {
+        limit(1).select(factory: factory)
 	}
 	
 	public func count() -> Int? {

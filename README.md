@@ -173,7 +173,7 @@ if let table = SQuery(at: "user.db").from(Account.tableName) {
 		.setWhere("\(Account.F_JOIN) >= ?", "2018-01-01 00:00:00")
 		.orderBy(Account.F_JOIN)
 		.orderBy(Account.F_AGE, desc: true)
-		.select { Account() /* ここで空のDataオブジェクトを生成する */ }.0
+		.select { Account() /* ここで空のDataオブジェクトを生成する */ }.rows
 	// ...
 }
 ```
@@ -197,7 +197,7 @@ if let table = SQuery(at: "user.db").from(Account.tableName) {
 ```swift
 if let table = SQuery(at: "user.db").from(Account.tableName) {
 	defer { table.close() }
-	if let row = table.setWhere("\(Account.F_ID)=?", "xxx").selectOne{ Account() }.0 {
+	if let row = table.setWhere("\(Account.F_ID)=?", "xxx").selectOne{ Account() }.row {
 		// 結果あり
 	}
 }
