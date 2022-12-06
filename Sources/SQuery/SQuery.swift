@@ -82,10 +82,10 @@ public enum SQLiteColumnType: String {
 }
 
 public class SQLiteError: Error {
-	let code: Int32
-	private let message: String
+	public let code: Int32
+	public let message: String
 	
-	init(code: Int32, message: String = "") {
+	public init(code: Int32, message: String = "") {
 		self.code = code
 		self.message = message
 	}
