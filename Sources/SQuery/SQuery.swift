@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.6.0
+//  - Version: 1.6.1
 //
 
 import Foundation
@@ -1313,7 +1313,7 @@ public class TableQuery {
 	private var sqlJoinOn = ""
 	private var sqlJoinOnArgs = [Any?]()
 	
-	private var sqlWhere = String()
+	private var sqlWhere = ""
 	private var sqlWhereArgs = [Any?]()
 	
 	private var sqlOrderBy = ""
@@ -1454,6 +1454,10 @@ public class TableQuery {
 	public func setWhere(_ whereText: String, _ args: Any?...) -> Self {
         return set(where: whereText, args: args)
 	}
+    public func `where`(_ whereText: String, _ args: Any?...) -> Self {
+        return set(where: whereText, args: args)
+    }
+
 	/// 参照
 	/// ---
 	/// ```
@@ -1461,7 +1465,11 @@ public class TableQuery {
 	/// ```
 	public func set(where whereText: String, args: [Any?] = []) -> Self {
 		sqlWhereArgs.removeAll()
-		
+        guard !whereText.isEmpty else {
+            sqlWhere = ""
+            return self
+        }
+        
 		sqlWhere = "(\(whereText))"
 		for arg in args {
 			sqlWhereArgs.append(arg)
@@ -1718,7 +1726,7 @@ public class TableQuery {
 		}
 		
 		// WHERE
-		if !sqlWhere.isEmpty {
+        if !sqlWhere.isEmpty {
 			sql.append(" WHERE \(sqlWhere)")
 		}
 		
