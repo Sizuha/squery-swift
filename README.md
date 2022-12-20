@@ -1,8 +1,6 @@
 # squery-swift
 Simple SQLite Query Library for Swift (iOS)
 
-まだ開発中です。 Now Developing...
-
 # Install
 
 ## Swift Package Manager
@@ -11,7 +9,7 @@ Go to Project -> Swift Packages and add the repository:
 https://github.com/Sizuha/squery-swift
 ```
 ## 手動
-必要なソースは**SQuery.swift**だけです（frameworkを追加したくない場合は**SQuery.swift**だけをコピー）
+必要なソースは**SQuery.swift**のみです。**SQuery.swift**だけをコピー。
 
 # DBのOpenとClose
 ```swift
@@ -47,27 +45,44 @@ let error = db.createTable(TableScheme(name: "TableName", columns: [
 ]), ifNotExists: true)
 ```
 
+又は
+
+```swift
+let db = SQuery(at: "some.db")
+defer { db.close() }
+let error = db.createTable(TableScheme(name: "TableName", columns: [
+    .def("idx", type: .integer, [.autoInc]) // PK and AUTO INCREMENT
+    .def("title", type: .text, [.notNull]),
+    .def("date", type: .integer),
+    .def("media", type: .integer),
+    .def("progress", type: .float),
+    .def("total", type: .integer),
+    .def("fin", type: .integer),
+    .def("rating", type: .float),
+    .def("memo", type: .text),
+    .def("link", type: .text),
+]), ifNotExists: true)
+```
+
 # Drop Table
 ```swift
-if let table = SQuery(at: "some.db").from("TableName") {
-	defer { table.close() }
-	let _ = table.drop()
-}
+guard let table = SQuery(at: "some.db").from("TableName") else { return }
+defer { table.close() }
+let _ = table.drop()
 ```
 
 # Select
 ```swift
 // SELECT * FROM account WHERE joinDate >= '2018-01-01 00:00:00' ORDER BY joinDate, age DESC;
-if let table = SQuery(at: "user.db").from("account") {
-	defer { table.close() } // 自動でDBをclose	
-	let cursor: SQLiteCursor = table
-		.setWhere("joinDate >= ?", "2018-01-01 00:00:00")
-		.orderBy("joinDate")
-		.orderBy("age", desc: true)
-		.select() // 結果を「Cursor」で返す
-	defer { cursor.close() }
-	// ...
-}
+guard let table = SQuery(at: "user.db").from("account") else { return }
+defer { table.close() } // 自動でDBをclose	
+let cursor: SQLiteCursor = table
+    .where("joinDate >= ?", "2018-01-01 00:00:00")
+    .orderBy("joinDate")
+    .orderBy("age", desc: true)
+    .select() // 結果を「Cursor」で返す
+defer { cursor.close() }
+// ...
 ```
 
 他にも `gorupBy()`,`limit()`,`distnict()`などが使える。
@@ -76,42 +91,41 @@ if let table = SQuery(at: "user.db").from("account") {
 where句の場合、ANDで条件を繋ぐ事がよくある。その時に`andWhere()`を使えば便利。
 ```swift
 // SELECT * FROM account WHERE (joinDate >= '2018-01-01 00:00:00') AND (age >= 18);
-if let table = SQuery(at: "user.db").from("account") {
-	defer { table.close() } // 自動でDBをclose	
-	let cursor: SQLiteCursor = table
-		.andWhere("joinDate >= ?", "2018-01-01 00:00:00")
-		.andWhere("age >= ?", 18)
-		.select()
-	defer { cursor.close() }
-	// ...
-}
+guard let table = SQuery(at: "user.db").from("account") else { return }
+defer { table.close() } // 自動でDBをclose	
+let cursor = table
+    // 最初のandWhereはwhereと同じ意味になる        
+    .andWhere("joinDate >= ?", "2018-01-01 00:00:00")
+    .andWhere("age >= ?", 18)
+    .select()
+defer { cursor.close() }
+// ...
 ```
 
 ## SQLiteCursor
 ### Cursorオブジェクトからデータを習得する方法
 ```swift
-if let tblAcc = SQuery(at:"user.db").from("account") {
-	defer { tblAcc.close() }
-	if let cursor = tblAcc
-		.setWhere("joinDate >= ", "2018-01-01 00:00:00")
-		.orderBy("joinDate")
-		.orderBy("age", desc: true)
-		.columns("id","name","age","joinDate")
-		.select()
-	{
-		defer { cursor.close() }
-		while cursor.next() {
-			let id = cursor.getString(0)
-			let name = cursor.getString(1)
-			let age = cursor.getInt(2)
+guard let tblAcc = SQuery(at:"user.db").from("account") else { return }
+defer { tblAcc.close() }
 
-			let joindateRaw = cursor.getString(3)
-			let joinDate: Date? = joindateRaw != nil
-			? SQuery.newDateTimeFormat.date(from: joindateRaw)
-			: nil
-			// ...		
-		}		
-	}
+let cursor = tblAcc
+    .where("joinDate >= ", "2018-01-01 00:00:00")
+    .orderBy("joinDate")
+    .orderBy("age", desc: true)
+    .columns("id","name","age","joinDate")
+    .select()
+
+defer { cursor.close() }
+while cursor.next() {
+    let id = cursor.getString(0)
+    let name = cursor.getString(1)
+    let age = cursor.getInt(2)
+
+    let joindateRaw = cursor.getString(3)
+    let joinDate: Date? = joindateRaw != nil
+        ? SQuery.newDateTimeFormat.date(from: joindateRaw)
+        : nil
+    // ...		
 }
 ```
 
@@ -119,7 +133,6 @@ Cursorが持っているデータをDictionaryで貰うこともできる。
 ```swift
 let result: [[String:Any?]] = cursor.toDictionaryAll(closeCursor: true)
 ```
-
 
 ### CursorからData Objectを作成
 先ずは、Data classに**SQueryRow** protocolを具現する。
@@ -155,7 +168,7 @@ class Account: SQueryRow {
 	}
 
 	func toValues() -> [String:Any?] {
-		return [
+		[
 			Account.F_ID: id,
 			Account.F_NAME: name,
 			Account.F_AGE: age,
@@ -167,39 +180,39 @@ class Account: SQueryRow {
 
 Seelctの結果をDataオブジェクトの配列で貰える。
 ```swift
-if let table = SQuery(at: "user.db").from(Account.tableName) {
-	defer { table.close() }
-	let rows: [Account] = table
-		.setWhere("\(Account.F_JOIN) >= ?", "2018-01-01 00:00:00")
-		.orderBy(Account.F_JOIN)
-		.orderBy(Account.F_AGE, desc: true)
-		.select { Account() /* ここで空のDataオブジェクトを生成する */ }.rows
-	// ...
-}
+guard let table = SQuery(at: "user.db").from(Account.tableName) else { return }
+defer { table.close() }
+let rows: [Account] = table
+    .where("\(Account.F_JOIN) >= ?", "2018-01-01 00:00:00")
+    .orderBy(Account.F_JOIN)
+    .orderBy(Account.F_AGE, desc: true)
+    .select(as: Account() /* 空のDataオブジェクトを生成するコード */).rows
+// ...
 ```
 
 配列を作成したくない場合、(for each)
 ```swift
-if let table = SQuery(at: "user.db").from(Account.tableName) {
-	defer { table.close() }
-	let _ = table
-		.setWhere("\(Account.F_JOIN) >= ?", "2018-01-01 00:00:00")
-		.orderBy(Account.F_JOIN)
-		.orderBy(Account.F_AGE, desc: true)
-		.select(factory:{ Account() }) { row: Account in
-		// ...
-		}
-	// ...
-}
+guard let table = SQuery(at: "user.db").from(Account.tableName) else { return }
+defer { table.close() }
+let _ = table
+    .where("\(Account.F_JOIN) >= ?", "2018-01-01 00:00:00")
+    .orderBy(Account.F_JOIN)
+    .orderBy(Account.F_AGE, desc: true)
+    .select(as: Account()) { row: Account in
+    // ...
+    }
+// ...
 ```
 
-結果のrowが１個か０の場合
+結果のrowが「１個」か「無し」の場合
 ```swift
-if let table = SQuery(at: "user.db").from(Account.tableName) {
-	defer { table.close() }
-	if let row = table.setWhere("\(Account.F_ID)=?", "xxx").selectOne{ Account() }.row {
-		// 結果あり
-	}
+guard let table = SQuery(at: "user.db").from(Account.tableName) else { return }
+defer { table.close() }
+if let row = table
+    .where("\(Account.F_ID)=?", "xxx")
+    .selectOne(as: Account()).row 
+{
+    // 結果あり
 }
 ```
 
@@ -249,89 +262,83 @@ guard let table = SQuery(at: db)?.from(Account.class) else { fatalError() }
 
 # Insert
 ```swift
-if let table = SQuery(at: "user.db").from(Account.tableName) {
-	defer { table.close() }
-	let item = Account()
-	item.id = "xxx"
-	// ...
-	let _ = table.insert(values: item)
-}
+guard let table = SQuery(at: "user.db").from(Account.tableName) else { return }
+defer { table.close() }
+let item = Account()
+item.id = "xxx"
+// ...
+let _ = table.insert(values: item)
 ```
 
 ## Auto Incrementのcolumnの例外処理
 Auto Incrementで宣言されたcolumnはINSERTで直接データをセットできない。この場合、下記の様に除外するcolumnを指定できる。
 ```swift
-if let table = SQuery(at: "some.db").from("TableName") {
-	defer { table.close() }
-	let item = [String:Any?]()
-	// ...ここでデータの中身を入れる...
-	
-	// idxがAuto Incrementの場合
-	if table.insert(values: item, except:["idx"]).isSuccess {
-		// 成功
-	} else {
-		// 失敗
-	}
+guard let table = SQuery(at: "some.db").from("TableName") else { return }
+defer { table.close() }
+let item = [String:Any?]()
+// ...ここでデータの中身を入れる...
+
+// idxがAuto Incrementの場合
+if table.insert(values: item, except:["idx"]).isSuccess {
+    // 成功
+} else {
+    // 失敗
 }
 ```
 
 # Update
 ```swift
 // UPDATE account WHERE id='xxx' SET name='TESTER', ...;
-if let table = SQuery(at: "user.db").from(Account.tableName) {
-	defer { table.close() }
-	
-	let item = Account()
-	item.id = "xxx"
-	item.name = "TESTER"
-	item.age = 20
-	item.joinDate = Date()
-	let rowCount = table
-		// 変更してはいけない「主キー(PK)」のcolumn名をここで指定しておく
-		.keys(Account.F_ID)
-		// keys()でPKを指定しておくと、WHERE句も自動で作成される
-		.update(set: item)
-		.rowCount
-}
+guard let table = SQuery(at: "user.db").from(Account.tableName) else { return }
+defer { table.close() }
+
+let item = Account()
+item.id = "xxx"
+item.name = "TESTER"
+item.age = 20
+item.joinDate = Date()
+let rowCount = table
+    // 変更してはいけない「主キー(PK)」のcolumn名をここで指定しておく
+    .keys(Account.F_ID)
+    // keys()でPKを指定しておくと、WHERE句も自動で作成される
+    .update(set: item)
+    .rowCount
 ```
 
 ```swift
 // UPDATE account WHERE id='xxx' SET name='TESTER';
-if let table = SQuery(at: "user.db").from(Account.tableName) {
-	defer { table.close() }
-	let rowCount = table
-		.setWhere("\(Account.F_ID)=?", "xxx")
-		.update(set: ["name": "TESTER"])
-		.rowCount
-}
+guard let table = SQuery(at: "user.db").from(Account.tableName) else { return }
+defer { table.close() }
+let rowCount = table
+    .where("\(Account.F_ID)=?", "xxx")
+    .update(set: ["name": "TESTER"])
+    .rowCount
 ```
 
 # Insert or Update
 先にINSERTを試して失敗する場合、UPDATEを実行する。
 つまり新規のデータを登録する時、既に存在する場合は入れ替える。
 ```swift
-if let table = SQuery(at: "user.db").from(Account.tableName) {
-	defer { table.close() }
-	
-	let item = Account()
-	item.id = "xxx"
-	item.name = "TESTER"
-	item.age = 20
-	item.joinDate = Date()
-	let _ = table
-		.keys(Account.F_ID)
-		.values(item)
-		.insertOrUpdate()
-}
+guard let table = SQuery(at: "user.db").from(Account.tableName) else { return }
+defer { table.close() }
+
+let item = Account()
+item.id = "xxx"
+item.name = "TESTER"
+item.age = 20
+item.joinDate = Date()
+let _ = table
+    .keys(Account.F_ID)
+    .values(item)
+    .insertOrUpdate()
 ```
 
 # Delete
 ```swift
-if let table = SQuery(at: "user.db").from(Account.tableName) {
-	defer { table.close() }
-	// DELETE FROM account WHERE id='xxx';
-	let _ = table.setWhere("\(Account.F_ID)=?","xxx").delete()
-}
+guard let table = SQuery(at: "user.db").from(Account.tableName) else { return }
+defer { table.close() }
+// DELETE FROM account WHERE id='xxx';
+let _ = table.where("\(Account.F_ID)=?","xxx").delete()
 ```
 
 # nilの扱いに注意！！
@@ -353,6 +360,3 @@ sample["comment"] = sqlNil
 // nilを確認
 let isNil = sample["comment"] is SqlNil
 ```
-
-
-

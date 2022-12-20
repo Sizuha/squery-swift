@@ -2,7 +2,7 @@
 //  Squery.swift
 //  Simple SQLite Query Library for Swift
 //
-//  - Version: 1.6.1
+//  - Version: 1.6.2
 //
 
 import Foundation
@@ -12,12 +12,8 @@ fileprivate let stdCalendar = Calendar(identifier: .gregorian)
 
 // MARK: Sql Nil
 public class SqlNil: NSObject {
-	public override var description: String {
-		return "sqlNil"
-	}
-	public override var debugDescription: String {
-		return "sqlNil"
-	}
+	public override var description: String { "sqlNil" }
+	public override var debugDescription: String { "sqlNil" }
 	public let asNil: Any? = nil
 	
 	public override func isEqual(_ object: Any?) -> Bool { object is SqlNil }
@@ -90,9 +86,7 @@ public class SQLiteError: Error {
 		self.message = message
 	}
 	
-	public var localizedDescription: String {
-		return self.message
-	}
+	public var localizedDescription: String { self.message }
 }
 
 fileprivate let SQLITE_TRANSIENT = unsafeBitCast(OpaquePointer(bitPattern: -1), to: sqlite3_destructor_type.self)
@@ -114,7 +108,7 @@ fileprivate func printLog(_ text: String, _ args: CVarArg...) {
 public class QueryResult {
     public let error: SQLiteError?
     public var isSuccess: Bool {
-        get { return error == nil }
+        get { error == nil }
     }
 
     public init(error: SQLiteError? = nil) {
@@ -162,9 +156,7 @@ public class SQLiteConnection {
 		db = nil
 	}
 	
-	public var isClosed: Bool {
-		return db == nil
-	}
+	public var isClosed: Bool { db == nil }
 	
 	public func getLastError() -> String? {
 		if let db = db {
@@ -182,7 +174,7 @@ public class SQLiteConnection {
 	}
 	
 	private func prepare(sql: String, _ args: Any?...) -> (OpaquePointer?, SQLiteError?) {
-		return prepare(sql: sql, args: args)
+		prepare(sql: sql, args: args)
 	}
 	private func prepare(sql: String, args: [Any?]) -> (OpaquePointer?, SQLiteError?) {
 		printLog("prepare sql: \(sql)")
@@ -300,9 +292,7 @@ public class SQLiteConnection {
 	
 	private func excute(_ stmt: OpaquePointer)  -> SQLiteError? {
 		let res = sqlite3_step(stmt)
-		defer {
-			sqlite3_finalize(stmt)
-		}
+		defer { sqlite3_finalize(stmt) }
 		
 		switch res {
 		case SQLITE_OK, SQLITE_ROW, SQLITE_DONE: return nil
@@ -321,10 +311,10 @@ public class SQLiteConnection {
 	}
 	
 	public func getUserVersion() -> Int {
-		return (try? executeScalar(sql: "PRAGMA user_version;")) ?? 0
+		(try? executeScalar(sql: "PRAGMA user_version;")) ?? 0
 	}
 	public func setUserVersion(_ ver: Int) -> Bool {
-		return execute(sql: "PRAGMA user_version=\(ver);") == nil
+		execute(sql: "PRAGMA user_version=\(ver);") == nil
 	}
 
 	// MARK: - TRANSACTION
@@ -343,26 +333,24 @@ public class SQLiteConnection {
 		return execute(sql: "BEGIN \(modeStr) TRANSACTION;") == nil
 	}
 	
-	public func endTransaction() -> Bool {
-		return commit()
-	}
+	public func endTransaction() -> Bool { commit() }
 	public func commit() -> Bool {
-		return execute(sql: "COMMIT TRANSACTION;") == nil
+		execute(sql: "COMMIT TRANSACTION;") == nil
 	}
 	
 	public func setSavePoint(name: String) -> Bool {
-		return execute(sql: "SAVEPOINT \(name);") == nil
+		execute(sql: "SAVEPOINT \(name);") == nil
 	}
 	
 	public func releaseSavePoint(name: String) -> Bool {
-		return execute(sql: "RELEASE SAVEPOINT \(name);") == nil
+		execute(sql: "RELEASE SAVEPOINT \(name);") == nil
 	}
 	
 	public func rollback() -> Bool {
-		return execute(sql: "ROLLBACK TRANSACTION;") == nil
+		execute(sql: "ROLLBACK TRANSACTION;") == nil
 	}
 	public func rollback(toSavePoint: String) -> Bool {
-		return execute(sql: "ROLLBACK TO SAVEPOINT \(toSavePoint);") == nil
+		execute(sql: "ROLLBACK TO SAVEPOINT \(toSavePoint);") == nil
 	}
 }
 
@@ -420,20 +408,18 @@ public class SQLiteCursor {
 	
 	/// エラーが無い場合に「true」
 	public var isSuccess: Bool {
-		get { return stmt != nil }
+		get { stmt != nil }
 	}
 	
 	private var errorObj: SQLiteError? = nil
 	/// エラーの内容
 	public var error: SQLiteError? {
-		get { return errorObj }
+		get { errorObj }
 	}
 	
 	private var columnCountRaw: Int32 = 0
 	/// 結果rowのcolumn数
-	public var columnCount: Int {
-		return Int(columnCountRaw)
-	}
+	public var columnCount: Int { Int(columnCountRaw) }
 	
 	private var columnNameMap = Dictionary<String,Int>()
 	
@@ -473,12 +459,9 @@ public class SQLiteCursor {
 		
 		let res = sqlite3_step(stmt)
 		switch res {
-		case SQLITE_ROW:
-			return true
-		case SQLITE_DONE:
-			return false
-		default:
-			return false
+		case SQLITE_ROW: return true
+		case SQLITE_DONE: return false
+		default: return false
 		}
 	}
 	
@@ -499,11 +482,11 @@ public class SQLiteCursor {
 	///   1) column名が存在する場合: columnのindex
 	///   2) 存在しない場合: nil
 	public func getColumnIndex(name: String) -> Int? {
-		return columnNameMap[name]
+		columnNameMap[name]
 	}
 	
 	private func getColumnNameRaw(_ col: Int32) -> String {
-		return String(cString: sqlite3_column_name(stmt, col))
+		String(cString: sqlite3_column_name(stmt, col))
 	}
 	
 	/// columnのindexでcolumnの名前を習得
@@ -543,7 +526,7 @@ public class SQLiteCursor {
 	/// - Parameter col: columnのindex
 	/// - Returns: **nil**の場合**true**
 	public func isNull(_ col: Int) -> Bool {
-		return getDataType(col) == SQLITE_NULL
+		getDataType(col) == SQLITE_NULL
 	}
 	
 	/// columnから32bitのInt型データを習得
@@ -553,7 +536,7 @@ public class SQLiteCursor {
 	///   1) データが**NULL**の場合: nil
 	///   2) それ以外: Int型の値
 	public func getInt(_ col: Int) -> Int? {
-		return isNull(col)
+		isNull(col)
 			? nil
 			: Int(sqlite3_column_int(stmt, Int32(col)))
 	}
@@ -565,7 +548,7 @@ public class SQLiteCursor {
 	///   1) データが**NULL**の場合: nil
 	///   2) それ以外: Int64型の値
 	public func getInt64(_ col: Int) -> Int64? {
-		return isNull(col)
+		isNull(col)
 			? nil
 			: Int64(sqlite3_column_int64(stmt, Int32(col)))
 	}
@@ -577,7 +560,7 @@ public class SQLiteCursor {
 	///   1) データが**NULL**の場合: nil
 	///   2) それ以外: 文字列（String型）
 	public func getString(_ col: Int) -> String? {
-		return isNull(col)
+		isNull(col)
 			? nil
 			: String(cString: sqlite3_column_text(stmt, Int32(col)))
 	}
@@ -589,7 +572,7 @@ public class SQLiteCursor {
 	///   1) データが**NULL**の場合: nil
 	///   2) それ以外: Double型の値
 	public func getDouble(_ col: Int) -> Double? {
-		return isNull(col)
+		isNull(col)
 			? nil
 			: sqlite3_column_double(stmt, Int32(col))
 	}
@@ -614,7 +597,7 @@ public class SQLiteCursor {
 	///   1) データが**NULL**の場合: nil
 	///   2) それ以外: Bool型の値
 	public func getBool(_ col: Int) -> Bool? {
-		return isNull(col)
+		isNull(col)
 			? nil
 			: getInt(col) != 0
 	}
@@ -640,7 +623,7 @@ public class SQLiteCursor {
 	///   1) データが**NULL**の場合: nil
 	///   2) それ以外: BLOBデータのポインター
 	public func getBlobRaw(_ col: Int) -> UnsafeRawPointer {
-		return sqlite3_column_blob(stmt, Int32(col))
+		sqlite3_column_blob(stmt, Int32(col))
 	}
 	
 	/// 現在のrowが持っている全データをDictionary形式で返す
@@ -770,14 +753,10 @@ public class SQuery {
 		
 		dataSource.append("?mode=")
 		switch mode {
-		case .readonly:
-			dataSource.append("ro")
-		case .readWrite:
-			dataSource.append("rw")
-		case .memory:
-			dataSource.append("memory")
-		default:
-			dataSource.append("rwc")
+		case .readonly: dataSource.append("ro")
+		case .readWrite: dataSource.append("rw")
+		case .memory: dataSource.append("memory")
+		default: dataSource.append("rwc")
 		}
 		
 		print("[SQuery] data source: \(dataSource)")
@@ -823,24 +802,17 @@ public class SQuery {
 	/// - Parameter table: Table名
 	/// - Returns: クエリを作成できる**TableQuery**オブジェクト
 	public func from(_ table: String) -> TableQuery? {
-		if let db = open() {
-			return TableQuery(db, table: table)
-		}
-		return nil
+        guard let db = open() else { return nil }
+        return TableQuery(db, table: table)
 	}
 	
 	public func tableCreator(name: String) -> TableCreator? {
-		if let db = open() {
-			return TableCreator(db: db, name: name)
-		}
-		return nil
+		guard let db = open() else { return nil }
+        return TableCreator(db: db, name: name)
 	}
 	
 	public func createTable(_ scheme: TableScheme, ifNotExists: Bool = true) -> Bool {
-		guard
-			let db = open()
-		else { return false }
-		
+		guard let db = open() else { return false }
 		return TableCreator(db: db, scheme: scheme).create(ifNotExists: ifNotExists) == nil
 	}
 	
@@ -888,11 +860,11 @@ public class SQuery {
 	}
 
 	public static func toTimestamp(_ datetime: Date) -> Int64 {
-		return Int64((datetime.timeIntervalSince1970 * 1000.0).rounded())
+		Int64((datetime.timeIntervalSince1970 * 1000.0).rounded())
 	}
 	
 	public static func toDate(timestamp: Int64) -> Date {
-		return Date(timeIntervalSince1970: TimeInterval(timestamp))
+		Date(timeIntervalSince1970: TimeInterval(timestamp))
 	}
 }
 
@@ -1097,9 +1069,7 @@ public class TableCreator {
 
 	public func createSql(ifNotExists: Bool = true) -> String {
 		var sql = "CREATE TABLE "
-		if (ifNotExists) {
-			sql.append("IF NOT EXISTS ")
-		}
+		if (ifNotExists) { sql.append("IF NOT EXISTS ") }
 		sql.append(tableName)
 		
 		var keys = [String]()
@@ -1405,7 +1375,7 @@ public class TableQuery {
 	
     // MARK: JOIN
 	public func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> Self {
-		return join(type: joinType, tables: tables, on: joinOn, args: args)
+		join(type: joinType, tables: tables, on: joinOn, args: args)
 	}
 	/// 参照
 	/// ---
@@ -1452,10 +1422,15 @@ public class TableQuery {
 	///   - args: 条件の中の「?」に対応するパラメータ達
 	/// - Returns: 自分のinstance
 	public func setWhere(_ whereText: String, _ args: Any?...) -> Self {
-        return set(where: whereText, args: args)
+        set(where: whereText, args: args)
 	}
+    /// 参照
+    /// ---
+    /// ```
+    /// func setWhere(_ whereText: String, args: Any?...) -> Self
+    /// ```
     public func `where`(_ whereText: String, _ args: Any?...) -> Self {
-        return set(where: whereText, args: args)
+        set(where: whereText, args: args)
     }
 
 	/// 参照
@@ -1504,7 +1479,7 @@ public class TableQuery {
 	///   - args: 条件の中の「?」に対応するパラメータ達
 	/// - Returns: 自分のinstance
 	public func andWhere(_ whereText: String, _ args: Any?...) -> Self {
-        return and(where: whereText, args: args)
+        and(where: whereText, args: args)
 	}
 	/// 参照
 	/// ---
@@ -1599,7 +1574,7 @@ public class TableQuery {
 	///   - args: HAVING条件の「?」に対応するパラメーター
 	/// - Returns: 自分のinstance
 	public func groupBy(_ cols: [String], having: String, args: Any?...) -> Self {
-		return groupBy(cols, having: having, args: args)
+		groupBy(cols, having: having, args: args)
 	}
 	/// GROUP BY句を作成する
 	/// 参照
@@ -1792,31 +1767,49 @@ public class TableQuery {
 	///   - each: 各行(row)のデータ、SQueryRow型
 	/// - Returns:
 	///   エラーが無い場合は「nil」を返す
-	public func select<T: SQueryRow>(factory: ()->T, forEach: (_ each: T)->Void) -> SQLiteError? {
+	public func select<T: SQueryRow>(factory: ()->T, forEach: (_ each: T)->Void) -> SQLiteError?
+    {
 		let cursor = select()
-		
-		defer {
-			cursor.close()
-		}
+		defer { cursor.close() }
 		while cursor.next() {
 			let newRow = factory()
 			newRow.load(from: cursor)
 			forEach(newRow)
 		}
-		
 		return cursor.error
 	}
+    
+    /// SELECTクエリを実行し、結果の各行(row)毎に処理を行う
+    ///
+    /// cursorは自動でcloseされる
+    ///
+    /// - Parameters:
+    ///   - as: SQueryRow型のinstance
+    ///   - forEach: 各行(row)で行う処理(clouser)
+    ///   - each: 各行(row)のデータ、SQueryRow型
+    /// - Returns:
+    ///   エラーが無い場合は「nil」を返す
+    public func select<T: SQueryRow>(as factory: @autoclosure ()->T, forEach: (_ each: T)->Void) -> SQLiteError?
+    {
+        select(factory: factory, forEach: forEach)
+    }
 
 	public func select<T: SQueryRow>(factory: ()->T) -> SelectQueryResult<T> {
 		var rows = [T]()
 		let error = select(factory: factory) { rows.append($0) }
         return SelectQueryResult(rows: rows, error: error)
 	}
-	
+    public func select<T: SQueryRow>(as factory: @autoclosure ()->T) -> SelectQueryResult<T> {
+        select(factory: factory)
+    }
+
 	public func selectOne<T: SQueryRow>(factory: ()->T) -> SelectQueryResult<T> {
         limit(1).select(factory: factory)
 	}
-	
+    public func selectOne<T: SQueryRow>(as factory: @autoclosure ()->T) -> SelectQueryResult<T> {
+        limit(1).select(factory: factory)
+    }
+
 	public func count() -> Int? {
 		let sql = makeQuerySql(forCount: true)
 		return try? db.executeScalar(sql: sql, args: sqlWhereArgs)
@@ -1832,11 +1825,11 @@ public class TableQuery {
 	}
 	
 	public func insert(values row: SQueryRow, except cols: [String] = []) -> UpdateQueryResult {
-		return values(row).insert(except: cols)
+		values(row).insert(except: cols)
 	}
 	
 	public func insert(values data: [String:Any?], except cols: [String] = []) -> UpdateQueryResult {
-		return values(data).insert(except: cols)
+		values(data).insert(except: cols)
 	}
 	
 	public func insert(except exceptCols: [String] = []) -> UpdateQueryResult {
@@ -1949,7 +1942,7 @@ public class TableQuery {
 	
 	//MARK: DROP
 	public func drop() -> Bool {
-		return db.execute(sql: "DROP TABLE \(tableName);") == nil
+		db.execute(sql: "DROP TABLE \(tableName);") == nil
 	}
 
 	//MARK: INSERT or UPDATE
