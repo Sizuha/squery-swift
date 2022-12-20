@@ -357,51 +357,60 @@ public class SQLiteConnection {
 //MARK: - SQLiteCursor
 
 /**
-SQLiteのクエリの結果(row達)を探索する
+ SQLiteのクエリの結果(row達)を探索する
 
-使い方
----
-
-rowを探索する
-```
-if let conn = SQuery(at:"sample.db").open() {
-let cursor = conn.query("SELECT * FROM user")
-  defer {
+ **使い方**
+ 
+ rowを探索する
+ ```
+ guard let conn = SQuery(at:"sample.db").open() else { return }
+ let cursor = conn.query("SELECT * FROM user")
+ defer {
     // Cursorの仕様が終わったら必ずcloseする!
     cursor.close()
     conn.close()
-  }
-  while cursor.next() {
+ }
+
+ while cursor.next() {
     // ...
-  }
-}
+ }
 ```
 
-rowからデータを習得
-```
-if let tblAcc = SQuery(at:"user.db").from("account") {
-  defer { tblAcc.close() }
-  if let cursor = tblAcc
+ rowからデータを習得
+ ```
+ guard let tblAcc = SQuery(at:"user.db").from("account") else { return }
+ defer { tblAcc.close() }
+ let cursor = tblAcc
     .whereAnd("joinDate >= ", 2018)
     .orderBy("joinDate")
     .columns("id","name","age","joinDate")
     .select()
-  {
-    defer { cursor.close() }
-    while curosr.next() {
-        let id = cursor.getString(0)
-        let name = cursor.getString(1)
-        let age = cursor.getInt(2)
-
-        let joindateRaw = cursor.getString(3)
-        let joinDate: Date? = joindateRaw != nil
-        ? SQuery.newDateTimeFormat.date(from: joindateRaw)
-        : nil
-        // ...
+  
+ defer { cursor.close() }
+ while curosr.next() {
+    var id: String?
+    var name: String?
+    var age: Int?
+    var joinDate: Date?
+ 
+    cursor.forEachColumn { cur, i in
+        let name = cur.getColumnName(i)
+        switch name {
+        case "id": id = cursor.getString(i)
+        case "name": name = cursor.getString(i)
+        case "age": age = cur.getint(i)
+        case "joinDate":
+            let joindateRaw = cursor.getString(i)
+            joinDate = joindateRaw != nil
+                ? SQuery.newDateTimeFormat.date(from: joindateRaw)
+                : nil
+        default: return
+        }
     }
-  }
-}
-```
+ 
+    // ...
+ }
+ ```
 */
 public class SQLiteCursor {
 	private var stmt: OpaquePointer? = nil
@@ -424,6 +433,7 @@ public class SQLiteCursor {
 	private var columnNameMap = Dictionary<String,Int>()
 	
 	/// Cursorオブジェクトを作成する。
+    ///
 	/// 直接オブジェクトを作成する事は無く、SQLiteConnectionクラスから実行されたクエリの結果として作られる。
 	///
 	/// - Parameter stmt:
@@ -445,15 +455,16 @@ public class SQLiteCursor {
 		}
 	}
 	
-	/// 初期状態に戻る。
-	/// rowをまた習得するには `next()` をコール。
+	/// 初期状態に戻る
+    ///
+	/// rowをまた取得するには `next()` をコール。
 	public func reset() {
 		guard isSuccess else { return }
 		sqlite3_reset(stmt)
 	}
 	
 	/// 次のrowを習得する
-	/// - Returns: rowがあったら**true**
+	/// - Returns: 返すrowが残っている場合：**true**
 	public func next() -> Bool {
 		guard isSuccess else { return false }
 		
@@ -465,8 +476,9 @@ public class SQLiteCursor {
 		}
 	}
 	
-	/// Coursorの作業を完全に終了する。
-	/// 仕様が終わったCursorは必ず`close()`する事。
+	/// Coursorの作業を完全に終了する
+    ///
+	/// 作業が終わったCursorは必ず`close()`すること
 	public func close() {
 		if let stmt = stmt {
 			sqlite3_finalize(stmt)
@@ -478,9 +490,7 @@ public class SQLiteCursor {
 	///
 	/// - Parameters:
 	///   - name: column名
-	/// - Returns:
-	///   1) column名が存在する場合: columnのindex
-	///   2) 存在しない場合: nil
+	/// - Returns: column名が存在する場合: columnのindex、存在しない場合: nil
 	public func getColumnIndex(name: String) -> Int? {
 		columnNameMap[name]
 	}
@@ -492,29 +502,24 @@ public class SQLiteCursor {
 	/// columnのindexでcolumnの名前を習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   indexが存在する場合**column名**、存在しない場合**nil**を返す
+	/// - Returns: indexが存在する場合**column名**、存在しない場合**nil**を返す
 	public func getColumnName(_ col: Int) -> String? {
 		for (colName, colIdx) in columnNameMap {
-			if colIdx == col {
-				return colName
-			}
+            if colIdx == col { return colName }
 		}
 		return nil
 	}
 	
-	/// 各column毎に処理を行う。
+	/// 各column毎に処理を行う
 	///
-	/// - Parameter each: 各column毎で呼ばれるClosure。
+	/// - Parameter each: 各column毎で呼ばれるClosure
 	/// - Parameter cursor: Coursorオブジェクト（自身）
 	/// - Parameter index: 現在のcolumnのindex
 	public func forEachColumn(_ each: (_ cursor: SQLiteCursor, _ index: Int)->Void) {
-		for i in 0..<columnCount {
-			each(self, i)
-		}
+		for i in 0..<columnCount { each(self, i) }
 	}
 	
-	//--- get Datas ---
+	// MARK: - Cursorからデータ取得
 	
 	private func getDataType(_ col: Int) -> Int32 {
 		guard isSuccess else { return SQLITE_NULL }
@@ -532,9 +537,7 @@ public class SQLiteCursor {
 	/// columnから32bitのInt型データを習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   1) データが**NULL**の場合: nil
-	///   2) それ以外: Int型の値
+	/// - Returns:データが**NULL**の場合: nil、それ以外: Int型の値
 	public func getInt(_ col: Int) -> Int? {
 		isNull(col)
 			? nil
@@ -544,9 +547,7 @@ public class SQLiteCursor {
 	/// columnからInt64型データを習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   1) データが**NULL**の場合: nil
-	///   2) それ以外: Int64型の値
+	/// - Returns:データが**NULL**の場合: nil、それ以外: Int64型の値
 	public func getInt64(_ col: Int) -> Int64? {
 		isNull(col)
 			? nil
@@ -556,9 +557,7 @@ public class SQLiteCursor {
 	/// columnからString型データを習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   1) データが**NULL**の場合: nil
-	///   2) それ以外: 文字列（String型）
+	/// - Returns:データが**NULL**の場合: nil、それ以外: 文字列（String型）
 	public func getString(_ col: Int) -> String? {
 		isNull(col)
 			? nil
@@ -568,9 +567,7 @@ public class SQLiteCursor {
 	/// columnからDouble型データを習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   1) データが**NULL**の場合: nil
-	///   2) それ以外: Double型の値
+	/// - Returns:データが**NULL**の場合: nil、それ以外: Double型の値
 	public func getDouble(_ col: Int) -> Double? {
 		isNull(col)
 			? nil
@@ -580,9 +577,7 @@ public class SQLiteCursor {
 	/// columnからFloat型データを習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   1) データが**NULL**の場合: nil
-	///   2) それ以外: Falot型の値
+	/// - Returns:データが**NULL**の場合: nil、それ以外: Falot型の値
 	public func getFloat(_ col: Int) -> Float? {
 		if let value = getDouble(col) {
 			return Float(value)
@@ -593,9 +588,7 @@ public class SQLiteCursor {
 	/// columnからBool型（true/false）データを習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   1) データが**NULL**の場合: nil
-	///   2) それ以外: Bool型の値
+	/// - Returns:データが**NULL**の場合: nil、それ以外: Bool型の値
 	public func getBool(_ col: Int) -> Bool? {
 		isNull(col)
 			? nil
@@ -605,9 +598,7 @@ public class SQLiteCursor {
 	/// columnからBinaryデータを習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   1) データが**NULL**の場合: nil
-	///   2) それ以外: Byte Array
+	/// - Returns: データが**NULL**の場合: nil、それ以外: Byte Array
 	public func getBlob(_ col: Int) -> [UInt8]? {
 		guard !isNull(col) else { return nil }
 		if let data = sqlite3_column_blob(stmt, Int32(col)) {
@@ -619,9 +610,7 @@ public class SQLiteCursor {
 	/// columnからBinaryデータのポインターを習得
 	///
 	/// - Parameter col: columnのindex
-	/// - Returns:
-	///   1) データが**NULL**の場合: nil
-	///   2) それ以外: BLOBデータのポインター
+	/// - Returns: データが**NULL**の場合: nil、それ以外: BLOBデータのポインター
 	public func getBlobRaw(_ col: Int) -> UnsafeRawPointer {
 		sqlite3_column_blob(stmt, Int32(col))
 	}
@@ -632,23 +621,22 @@ public class SQLiteCursor {
 	public func toDictionary() -> [String:Any?] {
 		var result = [String:Any?]()
 		forEachColumn { cur, i in
-			if let name = cur.getColumnName(i) {
-				let dataType = getDataType(i)
-				var value: Any? = nil
-				switch dataType {
-				case SQLITE_INTEGER:
-					value = cur.getInt64(i)
-				case SQLITE_FLOAT:
-					value = cur.getDouble(i)
-				case SQLITE_BLOB:
-					value = cur.getBlob(i)
-				default:
-					value = cur.getString(i)
-					break
-				}
-				
-				result[name] = value
-			}
+            guard let name = cur.getColumnName(i) else { return }
+            let dataType = getDataType(i)
+            var value: Any? = nil
+            switch dataType {
+            case SQLITE_INTEGER:
+                value = cur.getInt64(i)
+            case SQLITE_FLOAT:
+                value = cur.getDouble(i)
+            case SQLITE_BLOB:
+                value = cur.getBlob(i)
+            default:
+                value = cur.getString(i)
+                break
+            }
+            
+            result[name] = value
 		}
 		return result
 	}
@@ -674,8 +662,8 @@ public class SQLiteCursor {
 /**
 SQLite DBをべ便利に扱う為のライブラリ
 
-使い方
----
+**使い方**
+ 
 Open & Close
 ```
 let dbConn = SQuery(at:"db_file_path").open()
@@ -694,7 +682,6 @@ db.close()
 ```
 
 参照
----
 ```
 class TableQuery
 ```
@@ -762,13 +749,13 @@ public class SQuery {
 		print("[SQuery] data source: \(dataSource)")
 	}
 	
-	/// DBファイルを開く
-	///
-	/// このメソッドで直接DBファイルを開くよりは、`from()`メソッドを使うことをおすすめする。
-	/// - Returns:
-	///   1) DBファイルを開いて、SQLiteConnection オブジェクトとして返す
-	///   2) 以前、開いたものがあったら、それを返す
-	///   3) 失敗したら、nil
+    /// DBファイルを開く
+    ///
+    /// このメソッドで直接DBファイルを開くよりは、`from()`メソッドを使うことをおすすめする
+    /// - Returns:
+    /// (1) DBファイルを開いて、SQLiteConnection オブジェクトとして返す。
+    /// (2) 以前、開いたものがあったら、それを返す。
+    /// (3) 失敗したら、nil
 	public func open() -> SQLiteConnection? {
 		if dbConn == nil || dbConn?.isClosed == true {
 			var db: OpaquePointer?
@@ -794,8 +781,8 @@ public class SQuery {
 	///
 	/// 以後、指定したTableに対してクエリを実行する事になる
 	///
-	/// 参照
-	/// ---
+	/// **参照**
+	///
 	/// ```
 	/// class TableQuery
 	/// ```
@@ -1152,7 +1139,7 @@ public class TableCreator {
 /**
 SQLite DBの一つのTableに対して、クエリ分を作成し、実行する
 
-Rowデータのオブジェクト（例）
+**Rowデータのオブジェクト（例）**
 ```
 class Account: SQueryRow {
   var id = ""
@@ -1190,40 +1177,35 @@ class Account: SQueryRow {
 }
 ```
 
-SELECT
----
+**SELECT**
 ```
 // SELECT id, name, age FROM account WHERE age < 18 ORDER BY age DESC
-if let tableAcc = SQuery(at:"user.db").from("account") {
-  defer { tableAcc.close()  }
-  let rows = tableAcc
+guard let tableAcc = SQuery(at:"user.db").from("account") else { return }
+defer { tableAcc.close()  }
+let rows = tableAcc
     .columns("id","name","age") //省略すると「all columns」
     .setWhere("age < ?", 18)
     .orderBy(age, desc: true)
-    .select { Account() }
+    .select(as: Account()).rows
 
-  for row in rows { ... }
-}
+for row in rows { ... }
 ```
 
-SELECT One
----
+**SELECT One**
 ```
 // SELECT * account ORDER BY age DESC LIMIT 1
-let oldest: Account = try? tableAcc
+let oldest: Account? = tableAcc
   .orderBy(age, desc: true)
-  .selectOne { Account() }.0
+  .selectOne(as: Account()).row
 ```
 
-COUNT
----
+**COUNT**
 ```
 // SELECT count(*) FROM account WHERE age < 18
-let under18cnt = tableAcc.setWhere("age<?",18).count()
+let under18cnt = tableAcc.where("age<?",18).count()
 ```
 
-INSERT
----
+**INSERT**
 ```
 let data = Account()
 data.id = "test"
@@ -1238,8 +1220,7 @@ tableAcc.values(data).insert()
 tableAcc.insert(values: data)
 ```
 
-UPDATE
----
+**UPDATE**
 ```
 // UPDATE account
 // SET pwd="********", age=20, name="Tester"
@@ -1249,21 +1230,18 @@ tableAcc.keys("id").values(data).update()
 tableAcc.keys("id").update(set: data)
 ```
 
-INSERT or UPDATE
----
+**INSERT or UPDATE**
 ```
 tableAcc.keys("id").values(data).insertOrUpdate()
 ```
 
-DELETE
----
+**DELETE**
 ```
 // DELETE FROM account WHERE id = \(id)
-tableAcc.setWhere("id=?",id).delete()
+tableAcc.where("id=?",id).delete()
 ```
 
-DROP
----
+**DROP**
 ```
 // DROP TABLE account
 tableAcc.drop()
@@ -1302,17 +1280,18 @@ public class TableQuery {
 	
 	/// DBからTableを指定て、instanceを作る
 	///
-	/// Examples
-	/// ---
+	/// **Examples**
+	///
 	/// ```
-	/// if let dbConn = SQuery(at:"some.db").open() {
-	/// 	let table = TableQuery(dbConn, "tableName")
-	///		// ...
-	/// }
+	/// guard let dbConn = SQuery(at:"some.db").open() else { return }
+    /// defer { dbConn.close() }
+	/// let table = TableQuery(dbConn, "tableName")
+	///	// ...
 	/// ```
 	/// SQueryクラスの`from()`メソッドをおすすめ
 	/// ```
-	/// let table = SQuery(at:"some.db").from("tableName")
+	/// guard let table = SQuery(at:"some.db").from("tableName") else { return }
+    /// defer { table.close() }
 	/// ```
 	///
 	/// - Parameters:
@@ -1364,9 +1343,10 @@ public class TableQuery {
 	/// SELECT時に、重複したrow(行)は除外する設定
 	///
 	/// SQLの「SELECT DISTINCT」機能
-	/// - Parameter flag:
-	///   1) true = 重複したrow(行)を除外する
-	///   2) false = 重複したrow(行)も残す
+	/// - Parameters:
+	///     - flag:
+    ///         1) true = 重複したrow(行)を除外する
+    ///         2) false = 重複したrow(行)も残す
 	/// - Returns: 自分のinstance
 	public func distinct(_ flag: Bool = true) -> Self {
 		sqlDistinct = flag
@@ -1374,14 +1354,11 @@ public class TableQuery {
 	}
 	
     // MARK: JOIN
+    /// JOIN句を作成する
 	public func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> Self {
 		join(type: joinType, tables: tables, on: joinOn, args: args)
 	}
-	/// 参照
-	/// ---
-	/// ```
-	/// func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, _ args: Any?...) -> Self
-	/// ```
+	/// JOIN句を作成する
 	public func join(type joinType: SQueryJoin, tables: [String], on joinOn: String, args: [Any?]) -> Self {
 		switch joinType {
 		case .cross:
@@ -1400,44 +1377,46 @@ public class TableQuery {
 	}
 
     // MARK: WHERE
-	/// WHERE句を作成する
-	///
-	/// 検索条件を指定する。
-	/// SQLiteの「?」パラメーターに対応。
-	/// ```
-	/// // SELECT count(*) FROM account WHERE id=\(id) AND pass=\(pwd)
-	/// let cursor = SQuery(at:"user.db").from("account")?
-	///   .setWhere("id=? AND pass=?", id, pwd)
-	///   .select()
-	///
-	/// // UPDATE account SET pass=\(newPwd) WHERE id=\(id)
-	/// if let table = SQuery(at:"user.db").from("account") {
-	///   table.setWhere("id=?", id).update(set: ["pass":newPwd])
-	///   table.close()
-	/// }
-	/// ```
-	///
-	/// - Parameters:
-	///   - whereText: WHERE句に入る条件
-	///   - args: 条件の中の「?」に対応するパラメータ達
-	/// - Returns: 自分のinstance
+    /// WHER句を作成する
+    ///
+    /// **参照**
+    /// ```
+    /// func `where`(_ whereText: String, args: Any?...) -> Self
+    /// ```
 	public func setWhere(_ whereText: String, _ args: Any?...) -> Self {
         set(where: whereText, args: args)
 	}
-    /// 参照
-    /// ---
+    
+    /// WHERE句を作成する
+    ///
+    /// 検索条件を指定する。
+    /// SQLiteのData Bind（「?」パラメーター）にも対応。
     /// ```
-    /// func setWhere(_ whereText: String, args: Any?...) -> Self
+    /// // SELECT count(*) FROM account WHERE id=\(id) AND pass=\(pwd)
+    /// let cursor = SQuery(at:"user.db").from("account")?
+    ///   .setWhere("id=? AND pass=?", id, pwd)
+    ///   .select()
+    ///
+    /// // UPDATE account SET pass=\(newPwd) WHERE id=\(id)
+    /// guard let table = SQuery(at:"user.db").from("account") else { return }
+    /// table.Where("id=?", id).update(set: ["pass":newPwd])
+    /// table.close()
     /// ```
+    ///
+    /// - Parameters:
+    ///   - whereText: WHERE句に入る条件
+    ///   - args: 条件の中の「?」に対応するパラメータ達
+    /// - Returns: 自分のinstance
     public func `where`(_ whereText: String, _ args: Any?...) -> Self {
         set(where: whereText, args: args)
     }
 
-	/// 参照
-	/// ---
-	/// ```
-	/// func setWhere(_ whereText: String, args: Any?...) -> Self
-	/// ```
+    /// WHERE句を作成する
+    ///
+    /// **参照**
+    /// ```
+    /// func `where`(_ whereText: String, args: Any?...) -> Self
+    /// ```
 	public func set(where whereText: String, args: [Any?] = []) -> Self {
 		sqlWhereArgs.removeAll()
         guard !whereText.isEmpty else {
@@ -1453,26 +1432,25 @@ public class TableQuery {
 		return self
 	}
 	
-	/// `setWhere()`と同じだが、現在のWHERE句にAND条件で追加する
+	/// `where()`と同じだが、現在のWHERE句にAND条件で追加する
 	/// ```
 	/// // SELECT count(*) FROM account WHERE (id=\(id)) AND (pass=\(pwd))
 	/// let loginOk = SQuery(at:"user.db").from("account")?
-	///   .setWhere("id=?", id)
-	///   .whereAnd("pass=?", pwd)
+	///   .where("id=?", id)
+	///   .andWhere("pass=?", pwd)
 	///   .count() == 1
 	/// ```
-	/// `setWhere()`を使わずに`whereAnd()`だけでWHERE句を作成することもできる
+	/// `where()`を使わずに`whereAnd()`だけでWHERE句を作成することもできる
 	/// ```
 	/// let loginOk = SQuery(at:"user.db").from("account")?
-	///   .whereAnd("id=?", id)
-	///   .whereAnd("pass=?", pwd)
+	///   .andWhere("id=?", id)
+	///   .andWhere("pass=?", pwd)
 	///   .count() == 1
 	/// ```
 	///
-	/// 参照
-	/// ---
+	/// **参照**
 	/// ```
-	/// func setWhere(_ whereText: String, args: [Any?]) -> Self
+    /// func `where`(_ whereText: String, args: Any?...) -> Self
 	/// ```
 	/// - Parameters:
 	///   - whereText: 追加する条件
@@ -1481,8 +1459,9 @@ public class TableQuery {
 	public func andWhere(_ whereText: String, _ args: Any?...) -> Self {
         and(where: whereText, args: args)
 	}
-	/// 参照
-	/// ---
+	/// `where()`と同じだが、現在のWHERE句にAND条件で追加する
+    ///
+    /// **参照**
 	/// ```
 	/// func andWhere(_ whereText: String, args: Any?...) -> Self
 	/// ```
@@ -1537,21 +1516,21 @@ public class TableQuery {
 	/// ```
 	/// // SELECT * from account ORDER BY joinDate DESC, name ASC
 	/// let cursor = SQuery(at:"user.db").from("account")?
-	///   .setOrderBy("joinDate DESC, name ASC")
+	///   .set(orderBy: "joinDate DESC, name ASC")
 	///   .select()
 	///
 	/// ```
-	/// - Parameter orderByRaw: 自分のinstance
+	/// - Parameter orderBy: 並べ条件
 	/// - Returns: 自分のinstance
-	public func setOrderBy(_ orderByRaw: String) -> Self {
+	public func set(orderBy orderByRaw: String) -> Self {
 		sqlOrderBy = orderByRaw
 		return self
 	}
 	
     // MARK: GROUP BY
 	/// HAVING条件なしのGROUP BY句を作成する
-	/// 参照
-	/// ---
+    ///
+	/// **参照**
 	/// ```
 	/// func groupBy(_ cols: [String], having: String, args: Any?...) -> Self
 	/// ```
@@ -1577,8 +1556,8 @@ public class TableQuery {
 		groupBy(cols, having: having, args: args)
 	}
 	/// GROUP BY句を作成する
-	/// 参照
-	/// ---
+    ///
+	/// **参照*:
 	/// ```
 	/// func groupBy(_ cols: [String], having: String, args: Any?...) -> Self
 	/// ```
@@ -1612,8 +1591,9 @@ public class TableQuery {
 	}
 	
     // MARK: COLUMNS
-	/// 参照
-	/// ---
+	/// SELECTで習得するcolumn達を指定する
+    ///
+    /// **参照**
 	/// ```
 	/// func columns(_ columns: String...) -> Self
 	/// ```
@@ -1640,8 +1620,9 @@ public class TableQuery {
 		sqlKeyColumns = cols
 		return self
 	}
-	/// 参照
-	/// ---
+	/// Tableのキー(key)のcolumnを指定する
+    ///
+    /// **参照**
 	/// ```
 	/// func keys(columns cols: String...) -> Self
 	/// ```
@@ -1650,14 +1631,15 @@ public class TableQuery {
 		return self
 	}
 
-	//MARK: SELECT
+	// MARK: SELECT
 	
 	/// SELECT用のクエリ文を作成する
 	///
 	/// 現在の設定値(WHERE, ORDER BY, LIMIT など)でSELECTクエリ文を作成する
-	/// - Parameter forCount:
-	///   1) true = `count()`用のクエリを作る　例) SELECT count(*) ...
-	///   2) false = `select()`用のクエリを作る (default)
+	/// - Parameters
+    ///     - forCount
+	///         1) true = `count()`用のクエリを作る。例) `SELECT count(*) FROM ...`
+	///         2) false = `select()`用のクエリを作る (default)
 	/// - Returns: クエリ文
 	private func makeQuerySql(forCount: Bool = false) -> String {
 		// SELECT
@@ -1737,14 +1719,13 @@ public class TableQuery {
 	
 	/// SELECTクエリを実行し、その結果をCurosrオブジェクトで返す
 	///
-	/// 参照
-	/// ---
+	/// **参照**
 	/// - distinct()
 	/// - columns()
 	/// - join()
-	/// - setWhere(), whereAnd()
-	/// - groupBy(), setGroupBy()
-	/// - orderBy(), setOrderBy()
+	/// - where(), andWhere()
+	/// - groupBy()
+	/// - orderBy(),
 	/// - limit()
 	/// ```
 	/// class SQLiteCursor
