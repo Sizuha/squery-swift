@@ -1963,10 +1963,14 @@ public class TableQuery {
 }
 
 
-// MARK: - Extension
+// MARK: - Extensions
 
 public protocol SQueryRowEx: SQueryRow {
     static var tableScheme: TableScheme { get }
+}
+
+public protocol SQueryRowEx2: SQueryRowEx {
+    init()
 }
 
 public extension SQLiteCursor {
@@ -1989,5 +1993,20 @@ public extension SQuery {
         for table in tables {
             _ = createTable(table.tableScheme)
         }
+    }
+}
+
+public extension TableQuery {
+    func select<T: SQueryRowEx2>(type: T.Type, forEach: (_ each: T)->Void) -> SQLiteError?
+    {
+        select(as: T.init(), forEach: forEach)
+    }
+    
+    func select<T: SQueryRowEx2>(type: T.Type) -> SelectQueryResult<T> {
+        select(as: T.init())
+    }
+    
+    func selectOne<T: SQueryRowEx2>(type: T.Type) -> SelectQueryResult<T> {
+        limit(1).select(as: T.init())
     }
 }
