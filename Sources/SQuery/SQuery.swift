@@ -1615,9 +1615,9 @@ public class TableQuery {
 	/// 参照
 	/// ---
 	/// ```
-	/// func columns(columns: String...) -> Self
+	/// func columns(_ columns: String...) -> Self
 	/// ```
-	public func columns(columns: [String]) -> Self {
+	public func set(columns: [String]) -> Self {
 		sqlColumns = columns
 		return self
 	}
