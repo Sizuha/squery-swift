@@ -253,11 +253,11 @@ class Account: SQueryRowEx {
 // Create Table
 if let db = SQuery(at: db) {
 	defer { db.close() }
-	db.create(tables: [Account.class])
+	db.create(tables: [Account.self])
 }
 
 // Select Table (FROM)
-guard let table = SQuery(at: db)?.from(Account.class) else { fatalError() }
+guard let table = SQuery(at: db)?.from(Account.self) else { fatalError() }
 ```
 
 # Insert
